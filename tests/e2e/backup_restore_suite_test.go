@@ -45,8 +45,8 @@ var _ = Describe("AWS backup restore tests", func() {
 		MinK8SVersion        *K8sVersion
 	}
 
-	parksAppReady := VerificationFunction(func(ocClient client.Client, namespace string) error {
-		Eventually(IsDCReady(ocClient, "parks-app", "restify"), timeoutMultiplier*time.Minute*10, time.Second*10).Should(BeTrue())
+	mongoReady := VerificationFunction(func(ocClient client.Client, namespace string) error {
+		Eventually(IsDCReady(ocClient, "mongo-persistent", "todolist"), timeoutMultiplier*time.Minute*10, time.Second*10).Should(BeTrue())
 		return nil
 	})
 	mysqlReady := VerificationFunction(func(ocClient client.Client, namespace string) error {
@@ -176,13 +176,13 @@ var _ = Describe("AWS backup restore tests", func() {
 			PreBackupVerify:      mysqlReady,
 			PostRestoreVerify:    mysqlReady,
 		}, nil),
-		Entry("Parks application <4.8.0", BackupRestoreCase{
-			ApplicationTemplate:  "./sample-applications/parks-app/manifest.yaml",
-			ApplicationNamespace: "parks-app",
-			Name:                 "parks-e2e",
+		Entry("Mongo application <4.8.0", BackupRestoreCase{
+			ApplicationTemplate:  "./sample-applications/mongo-persistent/mongo-persistent.yaml",
+			ApplicationNamespace: "mongo-persistent",
+			Name:                 "mongo-e2e",
 			BackupRestoreType:    RESTIC,
-			PreBackupVerify:      parksAppReady,
-			PostRestoreVerify:    parksAppReady,
+			PreBackupVerify:      mongoReady,
+			PostRestoreVerify:    mongoReady,
 			MaxK8SVersion:        &K8sVersionOcp47,
 		}, nil),
 		Entry("MySQL application", BackupRestoreCase{
@@ -193,13 +193,13 @@ var _ = Describe("AWS backup restore tests", func() {
 			PreBackupVerify:      mysqlReady,
 			PostRestoreVerify:    mysqlReady,
 		}, nil),
-		Entry("Parks application >=4.8.0", BackupRestoreCase{
-			ApplicationTemplate:  "./sample-applications/parks-app/manifest4.8.yaml",
-			ApplicationNamespace: "parks-app",
-			Name:                 "parks-e2e",
+		Entry("Mongo application >=4.8.0", BackupRestoreCase{
+			ApplicationTemplate:  "./sample-applications/mongo-persistent/mongo-persistent.yaml",
+			ApplicationNamespace: "mongo-persistent",
+			Name:                 "mongo-e2e",
 			BackupRestoreType:    RESTIC,
-			PreBackupVerify:      parksAppReady,
-			PostRestoreVerify:    parksAppReady,
+			PreBackupVerify:      mongoReady,
+			PostRestoreVerify:    mongoReady,
 			MinK8SVersion:        &K8sVersionOcp48,
 		}, nil),
 	)
