@@ -176,14 +176,13 @@ var _ = Describe("AWS backup restore tests", func() {
 			PreBackupVerify:      mysqlReady,
 			PostRestoreVerify:    mysqlReady,
 		}, nil),
-		Entry("Mongo application <4.8.0", BackupRestoreCase{
+		Entry("Mongo application", BackupRestoreCase{
 			ApplicationTemplate:  "./sample-applications/mongo-persistent/mongo-persistent.yaml",
 			ApplicationNamespace: "mongo-persistent",
 			Name:                 "mongo-e2e",
 			BackupRestoreType:    RESTIC,
 			PreBackupVerify:      mongoReady,
 			PostRestoreVerify:    mongoReady,
-			MaxK8SVersion:        &K8sVersionOcp47,
 		}, nil),
 		Entry("MySQL application", BackupRestoreCase{
 			ApplicationTemplate:  "./sample-applications/mysql-persistent/mysql-persistent-template.yaml",
@@ -192,15 +191,6 @@ var _ = Describe("AWS backup restore tests", func() {
 			BackupRestoreType:    RESTIC,
 			PreBackupVerify:      mysqlReady,
 			PostRestoreVerify:    mysqlReady,
-		}, nil),
-		Entry("Mongo application >=4.8.0", BackupRestoreCase{
-			ApplicationTemplate:  "./sample-applications/mongo-persistent/mongo-persistent.yaml",
-			ApplicationNamespace: "mongo-persistent",
-			Name:                 "mongo-e2e",
-			BackupRestoreType:    RESTIC,
-			PreBackupVerify:      mongoReady,
-			PostRestoreVerify:    mongoReady,
-			MinK8SVersion:        &K8sVersionOcp48,
 		}, nil),
 	)
 })
