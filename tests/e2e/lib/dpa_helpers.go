@@ -339,7 +339,7 @@ func (v *DpaCustomResource) IsDeleted() wait.ConditionFunc {
 	}
 }
 
-//check if bsl matches the spec
+// check if bsl matches the spec
 func DoesBSLSpecMatchesDpa(namespace string, bsl velero.BackupStorageLocationSpec, spec *oadpv1alpha1.DataProtectionApplicationSpec) (bool, error) {
 	if len(spec.BackupLocations) == 0 {
 		return false, errors.New("no backup storage location configured. Expected BSL to be configured")
@@ -361,7 +361,7 @@ func DoesBSLSpecMatchesDpa(namespace string, bsl velero.BackupStorageLocationSpe
 	return true, nil
 }
 
-//check if vsl matches the spec
+// check if vsl matches the spec
 func DoesVSLSpecMatchesDpa(namespace string, vslspec velero.VolumeSnapshotLocationSpec, spec *oadpv1alpha1.DataProtectionApplicationSpec) (bool, error) {
 	if len(spec.SnapshotLocations) == 0 {
 		return false, errors.New("no volume storage location configured. Expected VSL to be configured")
@@ -381,7 +381,7 @@ func DoesVSLSpecMatchesDpa(namespace string, vslspec velero.VolumeSnapshotLocati
 	return false, errors.New("did not find expected VSL")
 }
 
-//check velero tolerations
+// check velero tolerations
 func VerifyVeleroTolerations(namespace string, t []corev1.Toleration) wait.ConditionFunc {
 	return func() (bool, error) {
 		clientset, err := setUpClient()
