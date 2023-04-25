@@ -1,87 +1,536 @@
-<h1>API References</h1>
+# API References
 
-### [DataProtectionApplicationSpec](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#DataProtectionApplicationSpec)
+## volumesnapshotbackups.datamover.oadp.openshift.io
 
-| Property             | Type                                                                        | Description                                                                                                     |
-|----------------------|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| backupLocations      | [] [BackupLocation](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#BackupLocation)                                                           | BackupLocations defines the list of desired configuration to use for BackupStorageLocations                     |
-| snapshotLocations    | [] [SnapshotLocation](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#SnapshotLocation)                                                         | SnapshotLocations defines the list of desired configuration to use for VolumeSnapshotLocations                  |
-| unsupportedOverrides | map [ [UnsupportedImageKey](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#UnsupportedImageKey) ] [string](https://pkg.go.dev/builtin#string)                                          | UnsupportedOverrides can be used to override the deployed dependent images for development. Options are `veleroImageFqin`, `awsPluginImageFqin`, `openshiftPluginImageFqin`, `azurePluginImageFqin`, `gcpPluginImageFqin`, `csiPluginImageFqin`, `dataMoverImageFqin`, `resticRestoreImageFqin`, `kubevirtPluginImageFqin`, and `operator-type`                     |
-| podAnnotations       | map [ [string](https://pkg.go.dev/builtin#string) ] [string](https://pkg.go.dev/builtin#string)                                                       | Used to add annotations to pods deployed by operator                                                            |
-| podDnsPolicy         | [corev1.DNSPolicy] ( https://pkg.go.dev/k8s.io/api/core/v1#DNSPolicy)       | DNSPolicy defines how a pod's DNS will be configured.                                                           |
-| podDnsConfig         | [corev1.PodDNSConfig] ( https://pkg.go.dev/k8s.io/api/core/v1#PodDNSConfig) | PodDNSConfig defines the DNS parameters of a pod in addition to those generated from DNSPolicy.                 |
-| backupImages         | *[bool](https://pkg.go.dev/builtin#bool)                                                                       | BackupImages is used to specify whether you want to deploy a registry for enabling backup and restore of images |
-| configuration        | *[ApplicationConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#ApplicationConfig)                                                          | Configuration is used to configure the data protection application's server config.                             |
-| features             | *[Features](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#Features)                                                                   | Features defines the configuration for the DPA to enable the tech preview features                           |
+```
+KIND:     VolumeSnapshotBackup
+VERSION:  datamover.oadp.openshift.io/v1alpha1
 
-### [BackupLocation](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#BackupLocation)
+DESCRIPTION:
+     VolumeSnapshotBackup is the Schema for the volumesnapshotbackups API
 
-| Property | Type                                                                                              | Description                                                                                    |
-|----------|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| velero   | [*velero.BackupStorageLocationSpec](https://velero.io/docs/v1.9/api-types/backupstoragelocation/) | Location to store backup objects. For further details, see  [here](config/bsl_and_vsl.md). |
-| bucket   | [*CloudStorageLocation](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#CloudStorageLocation) | [Tech Preview] Automates creation of bucket at some cloud storage providers for use as a backup storage location |
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     VolumeSnapshotBackupSpec defines the desired state of VolumeSnapshotBackup
+
+   status	<Object>
+     VolumeSnapshotBackupStatus defines the observed state of
+     VolumeSnapshotBackup
+
+```
 
 
-### [SnapshotLocation](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#SnapshotLocation)
+## volumesnapshotrestores.datamover.oadp.openshift.io
 
-| Property | Type                                                                                                | Description                                                                                    |
-|----------|-----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| velero   | [*velero.VolumeSnapshotLocationSpec](https://velero.io/docs/v1.9/api-types/volumesnapshotlocation/) | Location to store volume snapshots. For further details, see  [here] ( config/bsl_and_vsl.md). |
+```
+KIND:     VolumeSnapshotRestore
+VERSION:  datamover.oadp.openshift.io/v1alpha1
 
-### [ApplicationConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#ApplicationConfig)
+DESCRIPTION:
+     VolumeSnapshotRestore is the Schema for the volumesnapshotrestores API
 
-| Property | Type          | Description                                          |
-|----------|---------------|------------------------------------------------------|
-| velero   | *[VeleroConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#VeleroConfig) | This defines the configuration for the Velero server |
-| restic   | *[ResticConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#ResticConfig) | This defines the configuration for the Restic server |
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
 
-### [VeleroConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#VeleroConfig)
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 
-| Property                        | Type                    | Description                                                                                                                                                                                                                                              |
-|---------------------------------|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| featureFlags                    | [] [string](https://pkg.go.dev/builtin#string)               | FeatureFlags defines the list of features to enable for Velero instance                                                                                                                                                                                  |
-| defaultPlugins                  | [] [string](https://pkg.go.dev/builtin#string)               | Five types of default Velero plugins can be installed:  `AWS` ,  `GCP` ,  `Azure`  and  `OpenShift` , and  `CSI` . See  [here] ( config/plugins.md) for further information.                                                                             |
-| customPlugins                   | [][CustomPlugin](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#CustomPlugin) | Used for installation of custom Velero plugins. See  [here] ( config/plugins.md) for further information.                                                                                                                                                |
-| restoreResourcesVersionPriority | [string](https://pkg.go.dev/builtin#string)                  | RestoreResourceVersionPriority represents a configmap that will be created if defined for use in conjunction with `EnableAPIGroupVersions` feature flag. Defining this field automatically add EnableAPIGroupVersions to the velero server feature flag  |
-| noDefaultBackupLocation         | [bool](https://pkg.go.dev/builtin#bool)                    | If you need to install Velero without a default backup storage location NoDefaultBackupLocation flag is required for confirmation                                                                                                                        |
-| podConfig                       | *[PodConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#PodConfig)              | Velero Pod specific configuration                                                                                                                                                                                                                        |
-| logLevel                       | [string](https://pkg.go.dev/builtin#string)              | Velero server’s log level (default info, use debug for the most logging). Valid options are trace, debug, info, warning, error, fatal, or panic                                                                                                                                                                                                                        |
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 
-### [CustomPlugin](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#CustomPlugin)
+   spec	<Object>
+     VolumeSnapshotRestoreSpec defines the desired state of
+     VolumeSnapshotRestore
 
-| Property           | Type       | Description                                                                 |
-|--------------------|------------|-----------------------------------------------------------------------------|
-| name             |  [string](https://pkg.go.dev/builtin#string)     | Name of custom plugin |
-| image             |  [string](https://pkg.go.dev/builtin#string)     | Image of custom plugin |
+   status	<Object>
+     VolumeSnapshotRestoreStatus defines the observed state of
+     VolumeSnapshotRestore
 
-### [ResticConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#ResticConfig)
+```
 
-| Property           | Type       | Description                                                                 |
-|--------------------|------------|-----------------------------------------------------------------------------|
-| enable             | *[bool](https://pkg.go.dev/builtin#bool)      | Enables backup/restore using Restic. If set to false, snapshots are needed. |
-| supplementalGroups | [][int64](https://pkg.go.dev/builtin#int64)    | SupplementalGroups defines the linux groups to be applied to the Restic Pod |
-| timeout            | [string](https://pkg.go.dev/builtin#string)     | Timeout defines the Restic timeout, default value is 1h                     |
-| PodConfig          | *[PodConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#PodConfig) | Restic Pod specific configuration                                           |
 
-### [PodConfig](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#PodConfig)
+## cloudstorages.oadp.openshift.io
 
-| Property            | Type                                                                                      | Description                                                                                                                               |
-|---------------------|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| labels        | map [ [string](https://pkg.go.dev/builtin#string) ] [string](https://pkg.go.dev/builtin#string)                                                                     | Labels to add to pods                                                             |
-| nodeSelector        | map [ [string](https://pkg.go.dev/builtin#string) ] [string](https://pkg.go.dev/builtin#string)                                                                     | NodeSelector defines the nodeSelector to be supplied to Velero/Restic podSpec                                                             |
-| tolerations         | [][corev1.Toleration](https://pkg.go.dev/k8s.io/api/core/v1#Toleration)                  | Tolerations defines the list of tolerations to be applied to Velero Deployment/Restic daemonset                                                             |
-| resourceAllocations | [corev1.ResourceRequirements](https://pkg.go.dev/k8s.io/api/core/v1#ResourceRequirements) | Set specific resource  `limits`  and  `requests`  for the Velero/Restic pods. For more information, go  [here] ( config/resource_req_limits.md). |
+```
+KIND:     CloudStorage
+VERSION:  oadp.openshift.io/v1alpha1
 
-### [Features](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#Features)
-| Property  | Type      | Description                                                                                                                               |
-|-----------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| dataMover | [DataMover](https://pkg.go.dev/github.com/openshift/oadp-operator@master/api/v1alpha1#DataMover) | DataMover defines the various config for DPA data mover                                                             |
+DESCRIPTION:
+     <empty>
 
-### DataMover
-| Property       | Type | Description                                                                                                                   |
-|----------------|------|-------------------------------------------------------------------------------------------------------------------------------|
-| enable         | [bool](https://pkg.go.dev/builtin#bool) | Enable is used to specify whether you want to deploy the volume snapshot mover controller and a modified csi datamover plugin |
-| credentialName | [string](https://pkg.go.dev/builtin#string) | User supplied Restic Secret name for DataMover |                                                                               |
-| timeout        | [string](https://pkg.go.dev/builtin#string) | User supplied timeout to be used for VolumeSnapshotBackup and VolumeSnapshotRestore to complete, default value is 10m |                                                                               |
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
 
-See also [![Go Reference](https://pkg.go.dev/badge/github.com/openshift/oadp-operator.svg)](https://pkg.go.dev/github.com/openshift/oadp-operator) for a deeper dive.
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+
+   status	<Object>
+
+```
+
+
+## dataprotectionapplications.oadp.openshift.io
+
+```
+KIND:     DataProtectionApplication
+VERSION:  oadp.openshift.io/v1alpha1
+
+DESCRIPTION:
+     DataProtectionApplication is the Schema for the dpa API
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     DataProtectionApplicationSpec defines the desired state of Velero
+
+   status	<Object>
+     DataProtectionApplicationStatus defines the observed state of
+     DataProtectionApplication
+
+```
+
+
+## backuprepositories.velero.io
+
+```
+KIND:     BackupRepository
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     <empty>
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     BackupRepositorySpec is the specification for a BackupRepository.
+
+   status	<Object>
+     BackupRepositoryStatus is the current status of a BackupRepository.
+
+```
+
+
+## backupstoragelocations.velero.io
+
+```
+KIND:     BackupStorageLocation
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     BackupStorageLocation is a location where Velero stores backup objects
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     BackupStorageLocationSpec defines the desired state of a Velero
+     BackupStorageLocation
+
+   status	<Object>
+     BackupStorageLocationStatus defines the observed state of
+     BackupStorageLocation
+
+```
+
+
+## backups.velero.io
+
+```
+KIND:     Backup
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     Backup is a Velero resource that represents the capture of Kubernetes
+     cluster state at a point in time (API objects and associated volume state).
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     BackupSpec defines the specification for a Velero backup.
+
+   status	<Object>
+     BackupStatus captures the current status of a Velero backup.
+
+```
+
+
+## deletebackuprequests.velero.io
+
+```
+KIND:     DeleteBackupRequest
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     DeleteBackupRequest is a request to delete one or more backups.
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     DeleteBackupRequestSpec is the specification for which backups to delete.
+
+   status	<Object>
+     DeleteBackupRequestStatus is the current status of a DeleteBackupRequest.
+
+```
+
+
+## downloadrequests.velero.io
+
+```
+KIND:     DownloadRequest
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     DownloadRequest is a request to download an artifact from backup object
+     storage, such as a backup log file.
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     DownloadRequestSpec is the specification for a download request.
+
+   status	<Object>
+     DownloadRequestStatus is the current status of a DownloadRequest.
+
+```
+
+
+## podvolumebackups.velero.io
+
+```
+KIND:     PodVolumeBackup
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     <empty>
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     PodVolumeBackupSpec is the specification for a PodVolumeBackup.
+
+   status	<Object>
+     PodVolumeBackupStatus is the current status of a PodVolumeBackup.
+
+```
+
+
+## podvolumerestores.velero.io
+
+```
+KIND:     PodVolumeRestore
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     <empty>
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     PodVolumeRestoreSpec is the specification for a PodVolumeRestore.
+
+   status	<Object>
+     PodVolumeRestoreStatus is the current status of a PodVolumeRestore.
+
+```
+
+
+## restores.velero.io
+
+```
+KIND:     Restore
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     Restore is a Velero resource that represents the application of resources
+     from a Velero backup to a target Kubernetes cluster.
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     RestoreSpec defines the specification for a Velero restore.
+
+   status	<Object>
+     RestoreStatus captures the current status of a Velero restore
+
+```
+
+
+## schedules.velero.io
+
+```
+KIND:     Schedule
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     Schedule is a Velero resource that represents a pre-scheduled or periodic
+     Backup that should be run.
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     ScheduleSpec defines the specification for a Velero schedule
+
+   status	<Object>
+     ScheduleStatus captures the current state of a Velero schedule
+
+```
+
+
+## serverstatusrequests.velero.io
+
+```
+KIND:     ServerStatusRequest
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     ServerStatusRequest is a request to access current status information about
+     the Velero server.
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<map[string]>
+     ServerStatusRequestSpec is the specification for a ServerStatusRequest.
+
+   status	<Object>
+     ServerStatusRequestStatus is the current status of a ServerStatusRequest.
+
+```
+
+
+## volumesnapshotlocations.velero.io
+
+```
+KIND:     VolumeSnapshotLocation
+VERSION:  velero.io/v1
+
+DESCRIPTION:
+     VolumeSnapshotLocation is a location where Velero stores volume snapshots.
+
+FIELDS:
+   apiVersion	<string>
+     APIVersion defines the versioned schema of this representation of an
+     object. Servers should convert recognized schemas to the latest internal
+     value, and may reject unrecognized values. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
+   kind	<string>
+     Kind is a string value representing the REST resource this object
+     represents. Servers may infer this from the endpoint the client submits
+     requests to. Cannot be updated. In CamelCase. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
+   metadata	<Object>
+     Standard object's metadata. More info:
+     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+
+   spec	<Object>
+     VolumeSnapshotLocationSpec defines the specification for a Velero
+     VolumeSnapshotLocation.
+
+   status	<Object>
+     VolumeSnapshotLocationStatus describes the current status of a Velero
+     VolumeSnapshotLocation.
+
+```
