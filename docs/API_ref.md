@@ -534,3 +534,10 @@ FIELDS:
      VolumeSnapshotLocation.
 
 ```
+
+## how to generate this file 
+
+From the oadp-operator git repo, execute:
+```
+clear; for i in `ls bundle/manifests/*oadp.openshift.io* bundle/manifests/velero.io* | xargs -I {} sh -c 'yq ".metadata.name" {}'`; do printf "${bold}## $i${normal}\n\n"; printf "\`\`\`\n"; oc explain $i; printf "\`\`\`\n"; printf "\n\n"; done
+```
