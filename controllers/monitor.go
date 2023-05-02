@@ -164,3 +164,30 @@ func (r *DPAReconciler) updateVeleroMetricsSVC(svc *corev1.Service, dpa *oadpv1a
 	svc.Labels = r.getDpaAppLabels(dpa)
 	return nil
 }
+
+func (r *DPAReconciler) updateWesVeleroMetricsSVC(svc *corev1.Service, dpa *oadpv1alpha1.DataProtectionApplication) error {
+	// Setting controller owner reference on the metrics svc
+	err := controllerutil.SetControllerReference(dpa, svc, r.Scheme)
+	if err != nil {
+		return err
+	}
+
+	// when updating the spec fields we update each field individually
+	// to get around the immutable fields
+	svc.Spec.Selector = r.getDpaAppLabels(dpa)
+
+	svc.Spec.Type = corev1.ServiceTypeClusterIP
+	svc.Spec.Ports = []corev1.ServicePort{
+		{
+			Protocol: corev1.ProtocolTCP,
+			Name:     "monitoring",
+			Port:     int32(8085),
+			TargetPort: intstr.IntOrString{
+				IntVal: int32(8085),
+			},
+		},
+	}
+
+	svc.Labels = r.getDpaAppLabels(dpa)
+	return nil
+}
