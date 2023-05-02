@@ -2,6 +2,10 @@ package controllers
 
 import (
 	"fmt"
+	"os"
+	"reflect"
+	"strings"
+
 	"github.com/openshift/oadp-operator/pkg/credentials"
 	"github.com/operator-framework/operator-lib/proxy"
 	"github.com/sirupsen/logrus"
@@ -9,9 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"os"
-	"reflect"
-	"strings"
 
 	//"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,6 +41,7 @@ const (
 	VeleroAzureSecretName = "cloud-credentials-azure"
 	VeleroGCPSecretName   = "cloud-credentials-gcp"
 	enableCSIFeatureFlag  = "EnableCSI"
+	veleroIOPrefix        = "velero.io/"
 )
 
 var (
@@ -481,6 +483,14 @@ func (r *DPAReconciler) customizeVeleroDeployment(dpa *oadpv1alpha1.DataProtecti
 		veleroContainer.Args = append(veleroContainer.Args, fmt.Sprintf("--default-item-operation-timeout=%v", DefaultItemOperationTimeoutString))
 	}
 
+	if dpa.Spec.Configuration.Velero.ResourceTimeout != "" {
+		resourceTimeoutString := dpa.Spec.Configuration.Velero.ResourceTimeout
+		if err != nil {
+			return err
+		}
+		veleroContainer.Args = append(veleroContainer.Args, fmt.Sprintf("--resource-timeout=%v", resourceTimeoutString))
+	}
+
 	// Set defaults to avoid update events
 	if veleroDeployment.Spec.Strategy.Type == "" {
 		veleroDeployment.Spec.Strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
@@ -521,27 +531,31 @@ func (r *DPAReconciler) customizeVeleroContainer(dpa *oadpv1alpha1.DataProtectio
 				ReadOnly:  true,
 			})
 	}
+	// append velero PodConfig envs to container
+	if dpa.Spec.Configuration != nil && dpa.Spec.Configuration.Velero != nil && dpa.Spec.Configuration.Velero.PodConfig != nil && dpa.Spec.Configuration.Velero.PodConfig.Env != nil {
+		veleroContainer.Env = common.AppendUniqueEnvVars(veleroContainer.Env, dpa.Spec.Configuration.Velero.PodConfig.Env)
+	}
 	// Append proxy settings to the container from environment variables
-	veleroContainer.Env = append(veleroContainer.Env, proxy.ReadProxyVarsFromEnv()...)
+	veleroContainer.Env = common.AppendUniqueEnvVars(veleroContainer.Env, proxy.ReadProxyVarsFromEnv())
 	if dpa.BackupImages() {
-		veleroContainer.Env = append(veleroContainer.Env, corev1.EnvVar{
+		veleroContainer.Env = common.AppendUniqueEnvVars(veleroContainer.Env, []corev1.EnvVar{{
 			Name:  "OPENSHIFT_IMAGESTREAM_BACKUP",
 			Value: "true",
-		})
+		}})
 	}
 
 	// Check if data-mover is enabled and set the env var so that the csi data-mover code path is triggred
 	if r.checkIfDataMoverIsEnabled(dpa) {
-		veleroContainer.Env = append(veleroContainer.Env, corev1.EnvVar{
+		veleroContainer.Env = common.AppendUniqueEnvVars(veleroContainer.Env, []corev1.EnvVar{{
 			Name:  "VOLUME_SNAPSHOT_MOVER",
 			Value: "true",
-		})
+		}})
 
 		if len(dpa.Spec.Features.DataMover.Timeout) > 0 {
-			veleroContainer.Env = append(veleroContainer.Env, corev1.EnvVar{
+			veleroContainer.Env = common.AppendUniqueEnvVars(veleroContainer.Env, []corev1.EnvVar{{
 				Name:  "DATAMOVER_TIMEOUT",
 				Value: dpa.Spec.Features.DataMover.Timeout,
-			})
+			}})
 		}
 	}
 
@@ -744,11 +758,11 @@ func (r DPAReconciler) noDefaultCredentials(dpa oadpv1alpha1.DataProtectionAppli
 	} else {
 		for _, bsl := range dpa.Spec.BackupLocations {
 			if bsl.Velero != nil && bsl.Velero.Credential == nil {
-				bslProvider := strings.TrimPrefix(bsl.Velero.Provider, "velero.io/")
+				bslProvider := strings.TrimPrefix(bsl.Velero.Provider, veleroIOPrefix)
 				providerNeedsDefaultCreds[bslProvider] = true
 			}
 			if bsl.Velero != nil && bsl.Velero.Credential != nil {
-				bslProvider := strings.TrimPrefix(bsl.Velero.Provider, "velero.io/")
+				bslProvider := strings.TrimPrefix(bsl.Velero.Provider, veleroIOPrefix)
 				if found := providerNeedsDefaultCreds[bslProvider]; !found {
 					providerNeedsDefaultCreds[bslProvider] = false
 				}
@@ -771,7 +785,7 @@ func (r DPAReconciler) noDefaultCredentials(dpa oadpv1alpha1.DataProtectionAppli
 		if vsl.Velero != nil {
 			// To handle the case where we want to manually hand the credentials for a cloud storage created
 			// Bucket credentials via configuration. Only AWS is supported
-			provider := strings.TrimPrefix(vsl.Velero.Provider, "velero.io")
+			provider := strings.TrimPrefix(vsl.Velero.Provider, veleroIOPrefix)
 			if vsl.Velero.Credential != nil || provider == string(oadpv1alpha1.AWSBucketProvider) && hasCloudStorage {
 				providerNeedsDefaultCreds[provider] = false
 			} else {

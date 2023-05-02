@@ -92,6 +92,11 @@ type VeleroConfig struct {
 	// How long to wait on asynchronous BackupItemActions and RestoreItemActions to complete before timing out. Default value is 1h.
 	// +optional
 	DefaultItemOperationTimeout string `json:"defaultItemOperationTimeout,omitempty"`
+	// resourceTimeout defines how long to wait for several Velero resources before timeout occurs,
+	// such as Velero CRD availability, volumeSnapshot deletion, and repo availability.
+	// Default is 10m
+	// +optional
+	ResourceTimeout string `json:"resourceTimeout,omitempty"`
 }
 
 // PodConfig defines the pod configuration options
@@ -109,6 +114,9 @@ type PodConfig struct {
 	// +optional
 	// +nullable
 	ResourceAllocations corev1.ResourceRequirements `json:"resourceAllocations,omitempty"`
+	// env defines the list of environment variables to be supplied to podSpec
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // ResticConfig is the configuration for restic server
@@ -158,6 +166,8 @@ type CloudStorageLocation struct {
 type BackupLocation struct {
 	// TODO: Add name/annotations/labels support
 
+	// +optional
+	Name string `json:"name,omitempty"`
 	// +optional
 	Velero *velero.BackupStorageLocationSpec `json:"velero,omitempty"`
 	// +optional
@@ -221,6 +231,10 @@ type VolumeOptions struct {
 	// cacheAccessMode is the access mode to be used to provision the cache volume
 	//+optional
 	CacheAccessMode string `json:"cacheAccessMode,omitempty"`
+	// moverSecurityContext allows enabling the PodSecurityContext used in
+	// the application pod(s)
+	//+optional
+	MoverSecurityContext *bool `json:"moverSecurityContext,omitempty"`
 }
 
 // Features defines the configuration for the DPA to enable the tech preview features
@@ -303,6 +317,15 @@ type DataProtectionApplicationList struct {
 // Default BackupImages behavior when nil to true
 func (dpa *DataProtectionApplication) BackupImages() bool {
 	return dpa.Spec.BackupImages == nil || *dpa.Spec.BackupImages
+}
+
+func (veleroConfig *VeleroConfig) HasFeatureFlag(flag string) bool {
+	for _, featureFlag := range veleroConfig.FeatureFlags {
+		if featureFlag == flag {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {

@@ -24,7 +24,16 @@ require (
 	sigs.k8s.io/controller-runtime v0.12.2
 )
 
-require github.com/google/go-cmp v0.5.9
+require (
+	github.com/backube/volsync v0.4.0
+	github.com/google/go-cmp v0.5.9
+	github.com/konveyor/volume-snapshot-mover v0.0.0-20220725191622-4b360b792c3e
+)
+
+require (
+	github.com/deckarep/golang-set/v2 v2.1.0
+	github.com/google/go-cmp v0.5.9
+)
 
 require (
 	cloud.google.com/go v0.100.2 // indirect
@@ -145,4 +154,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/vmware-tanzu/velero => github.com/openshift/velero v0.10.2-0.20230314124508-69e6771dabdb
+replace github.com/vmware-tanzu/velero => github.com/openshift/velero v0.10.2-0.20230411180851-203d5bb613eb
