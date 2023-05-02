@@ -813,3 +813,12 @@ func (r *DPAReconciler) parseGCPSecret(secret corev1.Secret, secretKey string) (
 
 	return gcpcreds, nil
 }
+
+func (r *DPAReconciler) parseWesGCPSecret(secret corev1.Secret, secretKey string) (gcpCredentials, error) {
+
+	gcpcreds := gcpCredentials{}
+
+	gcpcreds.googleApplicationCredentials = string(secret.Data[secretKey])
+
+	return gcpcreds, nil
+}
