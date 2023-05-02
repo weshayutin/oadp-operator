@@ -49,6 +49,31 @@ type CloudStorageSpec struct {
 
 }
 
+type WesCloudStorageSpec struct {
+	// name is the name requested for the bucket (aws, gcp) or container (azure)
+	Name string `json:"name"`
+	// creationSecret is the secret that is needed to be used while creating the bucket.
+	CreationSecret corev1.SecretKeySelector `json:"creationSecret"`
+	// enableSharedConfig enable the use of shared config loading for AWS Buckets
+	EnableSharedConfig *bool `json:"enableSharedConfig,omitempty"`
+	// tags for the bucket
+	// +kubebuilder:validation:Optional
+	Tags map[string]string `json:"tags,omitempty"`
+	// region for the bucket to be in, will be us-east-1 if not set.
+	Region string `json:"region,omitempty"`
+	// +kubebuilder:validation:Enum=aws
+	// provider is the provider of the cloud storage
+	Provider CloudStorageProvider `json:"provider"`
+
+	// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/storage/azblob@v0.2.0#section-readme
+	// azure blob primary endpoint
+	// az storage account show -g <resource-group> -n <storage-account>
+	// need storage account name and key to create azure container
+	// az storage container create -n <container-name> --account-name <storage-account-name> --account-key <storage-account-key>
+	// azure account key will use CreationSecret to store key and account name
+
+}
+
 type CloudStorageStatus struct {
 	Name       string       `json:"name"`
 	LastSynced *metav1.Time `json:"lastSyncTimestamp,omitempty"`
