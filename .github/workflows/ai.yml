@@ -1,6 +1,12 @@
 name: GitHub AI Actions Demo
 run-name: ${{ github.actor }} is testing out GitHub AI Actions 🚀
-on: [pull_request]
+on: 
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
 jobs:
   code-review:
     runs-on: ubuntu-latest
