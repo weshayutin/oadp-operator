@@ -1,0 +1,8 @@
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: mysql-persistent-argo-restore
+  namespace: openshift-adp
+spec:
+  backupName: mysql-persistent-argo-1
+  restorePVs: true

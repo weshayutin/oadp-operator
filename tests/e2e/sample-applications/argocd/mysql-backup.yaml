@@ -1,0 +1,13 @@
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  name: mysql-persistent-argo-1
+  namespace: openshift-adp
+spec:
+  includedNamespaces:
+  - mysql-persistent
+  includedResources:
+    - pv
+    - pvc
+  storageLocation: dpa-sample-1
+  ttl: 720h0m0s
