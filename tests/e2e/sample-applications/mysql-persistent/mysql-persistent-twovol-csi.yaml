@@ -29,7 +29,34 @@ items:
     supplementalGroups:
       type: RunAsAny
     volumes:
-    - '*'
+      - awsElasticBlockStore
+      - azureDisk
+      - azureFile
+      - cephFS
+      - cinder
+      - configMap
+      - csi
+      - downwardAPI
+      - emptyDir
+      - ephemeral
+      - fc
+      - flexVolume
+      - flocker
+      - gcePersistentDisk
+      - gitRepo
+      - glusterfs
+      - iscsi
+      - nfs
+      - persistentVolumeClaim
+      - photonPersistentDisk
+      - portworxVolume
+      - projected
+      - quobyte
+      - rbd
+      - scaleIO
+      - secret
+      - storageOS
+      - vsphere
     users:
     - system:admin
     - system:serviceaccount:mysql-persistent:mysql-persistent-sa
