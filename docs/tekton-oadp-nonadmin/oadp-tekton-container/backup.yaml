@@ -6,5 +6,4 @@ metadata:
 spec:
   includedNamespaces:
   - NAMESPACE
-  storageLocation: dpa-sample-1
   ttl: 720h0m0s

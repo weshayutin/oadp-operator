@@ -81,8 +81,8 @@ FILES="03-rbac-pipeline-role.yaml
 # apply the templates
 pushd $OUTPUT_DIR
 for i in $FILES; do
-  printf "\nExecuting oc create -f $i\n"
-  oc create -f $i
+  printf "\nExecuting oc apply -f $i\n"
+  oc apply -f $i
 done
 
 # oc adm policy add-role-to-user view $USER -n $PROJECT
