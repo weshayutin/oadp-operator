@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -99,6 +100,9 @@ var _ = Describe("AWS backup restore tests", func() {
 			return
 		}
 		GinkgoWriter.Println("Report after each: state: ", report.State.String())
+		baseReportDir := artifact_dir + "/" + report.LeafNodeText
+		err := os.MkdirAll(baseReportDir, 0755)
+		Expect(err).NotTo(HaveOccurred())
 		if report.Failed() {
 			// print namespace error events for app namespace
 			if lastBRCase.ApplicationNamespace != "" {
@@ -148,15 +152,13 @@ var _ = Describe("AWS backup restore tests", func() {
 				GinkgoWriter.Println("Printing volume-snapshot-mover deployment pod logs")
 				GinkgoWriter.Print(GetDeploymentPodContainerLogs(namespace, common.DataMover, common.DataMoverControllerContainer))
 			}
-
-			logs, err := GetVeleroContainerLogs(namespace)
+			err = SavePodLogs(namespace, baseReportDir)
 			Expect(err).NotTo(HaveOccurred())
-			GinkgoWriter.Println(logs)
-			GinkgoWriter.Println("End of velero deployment pod logs")
+			err = SavePodLogs(lastBRCase.ApplicationNamespace, baseReportDir)
+			Expect(err).NotTo(HaveOccurred())
 		}
-		// remove app namespace if leftover (likely previously failed before reaching uninstall applications) to clear items such as PVCs which are immutable so that next test can create new ones
 
-		err := dpaCR.Client.Delete(context.Background(), &corev1.Namespace{ObjectMeta: v1.ObjectMeta{
+		err = dpaCR.Client.Delete(context.Background(), &corev1.Namespace{ObjectMeta: v1.ObjectMeta{
 			Name:      lastBRCase.ApplicationNamespace,
 			Namespace: lastBRCase.ApplicationNamespace,
 		}}, &client.DeleteOptions{})
@@ -192,6 +194,7 @@ var _ = Describe("AWS backup restore tests", func() {
 		}
 		err = dpaCR.Delete()
 		Expect(err).ToNot(HaveOccurred())
+		Eventually(IsNamespaceDeleted(lastBRCase.ApplicationNamespace), timeoutMultiplier*time.Minute*2, time.Second*5).Should(BeTrue())
 	})
 
 	updateLastInstallTime := func() {
@@ -350,14 +353,6 @@ var _ = Describe("AWS backup restore tests", func() {
 			log.Printf("Running post-restore function for case %s", brCase.Name)
 			err = brCase.PostRestoreVerify(dpaCR.Client, brCase.ApplicationNamespace)
 			Expect(err).ToNot(HaveOccurred())
-
-			// Test is successful, clean up everything
-			log.Printf("Uninstalling application for case %s", brCase.Name)
-			err = UninstallApplication(dpaCR.Client, brCase.ApplicationTemplate)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Wait for namespace to be deleted
-			Eventually(IsNamespaceDeleted(brCase.ApplicationNamespace), timeoutMultiplier*time.Minute*2, time.Second*5).Should(BeTrue())
 
 			if brCase.BackupRestoreType == CSI || brCase.BackupRestoreType == CSIDataMover {
 				log.Printf("Deleting VolumeSnapshot for CSI backuprestore of %s", brCase.Name)

@@ -14,11 +14,12 @@ import (
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1api "k8s.io/api/storage/v1"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -30,6 +31,8 @@ const (
 	ResticCustomCAKey   = "RESTIC_CUSTOM_CA"
 	ResticsecretName    = "dm-credential"
 	ResticPruneInterval = "restic-prune-interval"
+
+	DataMoverDummyPodImageEnvVar = "DATA_MOVER_DUMMY_POD_IMAGE"
 
 	// batchNumbers vars
 	DefaultConcurrentBackupVolumes  = "10"
@@ -48,7 +51,15 @@ const (
 	// GCP vars
 	GoogleApplicationCredentials = "GOOGLE_APPLICATION_CREDENTIALS"
 
-	DataMoverConfigMapName = "datamover-config"
+	// RetainPolicy parameters
+	SnapshotRetainPolicyHourly  = "SnapshotRetainPolicyHourly"
+	SnapshotRetainPolicyDaily   = "SnapshotRetainPolicyDaily"
+	SnapshotRetainPolicyWeekly  = "SnapshotRetainPolicyWeekly"
+	SnapshotRetainPolicyMonthly = "SnapshotRetainPolicyMonthly"
+	SnapshotRetainPolicyYearly  = "SnapshotRetainPolicyYearly"
+	SnapshotRetainPolicyWithin  = "SnapshotRetainPolicyWithin"
+
+	DataMoverReplicaOverride = "DATAMOVER_DEBUG_REPLICAS_OVERRIDE"
 )
 
 type gcpCredentials struct {
@@ -78,10 +89,20 @@ func (r *DPAReconciler) ReconcileDataMoverController(log logr.Logger) (bool, err
 		if err != nil {
 
 			if k8serror.IsNotFound(err) {
-
 				return false, fmt.Errorf("volSync operator not found. Please install")
 			}
 
+			return false, err
+		}
+
+		adpNS := corev1.Namespace{}
+		if err := r.Get(r.Context, types.NamespacedName{Name: r.NamespacedName.Namespace}, &adpNS); err != nil {
+			return false, err
+		}
+
+		// add volsync privileged mover annotation
+		err = r.addAnnotations(&adpNS, r.Log)
+		if err != nil {
 			return false, err
 		}
 	}
@@ -177,54 +198,61 @@ func (r *DPAReconciler) ReconcileDataMoverVolumeOptions(log logr.Logger) (bool, 
 		return false, err
 	}
 
-	// check configMap already exists
-	confMap, confMapExists, err := r.checkDataMoverConfigMapExists()
-	if err != nil {
-		return false, err
-	}
+	if dpa.Spec.Features != nil && dpa.Spec.Features.DataMover != nil &&
+		dpa.Spec.Features.DataMover.VolumeOptionsForStorageClasses != nil {
 
-	// check for existing configMap but no data mover configs set
-	if !r.checkDataMoverVolumeOptions(&dpa) && confMapExists {
+		for sc, v := range dpa.Spec.Features.DataMover.VolumeOptionsForStorageClasses {
 
-		err := r.Delete(context.Background(), confMap, &client.DeleteOptions{})
-		if err != nil {
-			return false, err
-		}
-	}
-
-	// create configmap only if data mover is enabled and has config values
-	if r.checkIfDataMoverIsEnabled(&dpa) && r.checkDataMoverVolumeOptions(&dpa) {
-
-		// create configmap to pass values to data mover CRs
-		cm := corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      DataMoverConfigMapName,
-				Namespace: dpa.Namespace,
-				Labels: map[string]string{
-					oadpv1alpha1.OadpOperatorLabel: "True",
-				},
-			},
-		}
-
-		op, err := controllerutil.CreateOrPatch(r.Context, r.Client, &cm, func() error {
-			err := r.buildDataMoverConfigMap(&dpa, &cm)
+			// check if configMap exists but not configured
+			err := r.validateDataMoverConfigMap(&dpa)
 			if err != nil {
-				return err
+				return false, err
 			}
-			return nil
 
-		})
-		if err != nil {
-			return false, err
-		}
+			// check for storageClass on DPA existing in cluster
+			err = r.validateDataMoverStorageClass(sc)
+			if err != nil {
+				return false, err
+			}
 
-		if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated {
+			// create configmap only if data mover is enabled and has config values
+			if r.checkIfDataMoverIsEnabled(&dpa) && r.checkDataMoverConfigMapStorageClass(&dpa, sc) {
 
-			r.EventRecorder.Event(&cm,
-				corev1.EventTypeNormal,
-				"ConfigMapReconciled",
-				fmt.Sprintf("performed %v on configmap %v", op, cm.Name),
-			)
+				// create configmap for each storageClass to pass values to data mover CRs
+				cm := corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-config", sc),
+						Namespace: dpa.Namespace,
+						Labels: map[string]string{
+							oadpv1alpha1.OadpOperatorLabel: "True",
+							oadpv1alpha1.DataMoverLabel:    "True",
+							oadpv1alpha1.StorageClassLabel: sc,
+						},
+					},
+				}
+
+				op, err := controllerutil.CreateOrPatch(r.Context, r.Client, &cm, func() error {
+					err := r.buildDataMoverConfigMap(&dpa, &cm, &v, r.Log)
+					if err != nil {
+						return err
+					}
+					return nil
+
+				})
+				if err != nil {
+					return false, err
+				}
+
+				if op == controllerutil.OperationResultCreated || op == controllerutil.OperationResultUpdated {
+
+					r.EventRecorder.Event(&cm,
+						corev1.EventTypeNormal,
+						"ConfigMapReconciled",
+						fmt.Sprintf("performed %v on configmap %v", op, cm.Name),
+					)
+				}
+
+			}
 		}
 	}
 
@@ -250,10 +278,17 @@ func (r *DPAReconciler) buildDataMoverDeployment(dataMoverDeployment *appsv1.Dep
 		},
 	}
 
+	replicas := int32(1)
+	if value, present := os.LookupEnv(DataMoverReplicaOverride); present {
+		if converted, err := strconv.Atoi(value); err == nil {
+			replicas = int32(converted)
+		}
+	}
+
 	dataMoverDeployment.Labels = r.getDataMoverLabels()
 	dataMoverDeployment.Spec = appsv1.DeploymentSpec{
 		Selector: dataMoverDeployment.Spec.Selector,
-		Replicas: pointer.Int32(1),
+		Replicas: &replicas,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
@@ -312,8 +347,19 @@ func (r *DPAReconciler) customizeDataMoverContainer(dpa *oadpv1alpha1.DataProtec
 			Value: DefaultConcurrentRestoreVolumes,
 		})
 	}
+	dataMoverContainer.Env = append(dataMoverContainer.Env, corev1.EnvVar{
+		Name:  DataMoverDummyPodImageEnvVar,
+		Value: getDataMoverDummyPodImage(),
+	})
 
 	return nil
+}
+
+func getDataMoverDummyPodImage() string {
+	if os.Getenv("RELATED_IMAGE_DATA_MOVER_DUMMY_POD") == "" {
+		return common.DummyPodImage
+	}
+	return os.Getenv("RELATED_IMAGE_DATA_MOVER_DUMMY_POD")
 }
 
 func (r *DPAReconciler) getDataMoverImage(dpa *oadpv1alpha1.DataProtectionApplication) string {
@@ -563,7 +609,7 @@ func (r *DPAReconciler) createResticSecretsPerBSL(dpa *oadpv1alpha1.DataProtecti
 	return nil, nil
 }
 
-//build data mover restic secret for given aws bsl
+// build data mover restic secret for given aws bsl
 func (r *DPAReconciler) buildDataMoverResticSecretForAWS(rsecret *corev1.Secret, key string, secret string, region string, pass []byte, repo string, pruneInterval string, resticCustomCA []byte) error {
 
 	// TODO: add gcp, azure support
@@ -584,7 +630,7 @@ func (r *DPAReconciler) buildDataMoverResticSecretForAWS(rsecret *corev1.Secret,
 	return nil
 }
 
-//build data mover restic secret for given bsl
+// build data mover restic secret for given bsl
 func (r *DPAReconciler) buildDataMoverResticSecretForAzure(rsecret *corev1.Secret, accountName string, accountKey string, pass []byte, repo string, pruneInterval string, resticCustomCA []byte) error {
 
 	rData := &corev1.Secret{
@@ -603,7 +649,7 @@ func (r *DPAReconciler) buildDataMoverResticSecretForAzure(rsecret *corev1.Secre
 	return nil
 }
 
-//build data mover restic secret for given gcp bsl
+// build data mover restic secret for given gcp bsl
 func (r *DPAReconciler) buildDataMoverResticSecretForGCP(rsecret *corev1.Secret, googleApplicationCredentials string, pass []byte, repo string, pruneInterval string, resticCustomCA []byte) error {
 
 	rData := &corev1.Secret{
@@ -695,7 +741,7 @@ func (r *DPAReconciler) ReconcileDataMoverResticSecret(log logr.Logger) (bool, e
 	return true, nil
 }
 
-//Check if Data Mover feature is enable in the DPA config or not
+// Check if Data Mover feature is enable in the DPA config or not
 func (r *DPAReconciler) checkIfDataMoverIsEnabled(dpa *oadpv1alpha1.DataProtectionApplication) bool {
 
 	if dpa.Spec.Features != nil && dpa.Spec.Features.DataMover != nil &&
@@ -706,37 +752,49 @@ func (r *DPAReconciler) checkIfDataMoverIsEnabled(dpa *oadpv1alpha1.DataProtecti
 	return false
 }
 
-func (r *DPAReconciler) checkDataMoverVolumeOptions(dpa *oadpv1alpha1.DataProtectionApplication) bool {
+func (r *DPAReconciler) checkDataMoverConfigMapStorageClass(dpa *oadpv1alpha1.DataProtectionApplication, cfName string) bool {
+
+	scName := strings.TrimSuffix(cfName, "-config")
+	scFound := false
+
+	for sc := range dpa.Spec.Features.DataMover.VolumeOptionsForStorageClasses {
+		if scName == sc {
+			scFound = true
+		}
+	}
+	return scFound
+}
+
+func (r *DPAReconciler) checkDataMoverSnapshotRetainPolicy(dpa *oadpv1alpha1.DataProtectionApplication) bool {
 
 	if dpa.Spec.Features != nil && dpa.Spec.Features.DataMover != nil &&
-		dpa.Spec.Features.DataMover.DataMoverVolumeOptions != nil {
+		dpa.Spec.Features.DataMover.SnapshotRetainPolicy != nil {
 		return true
 	}
 
 	return false
 }
 
-func (r *DPAReconciler) buildDataMoverConfigMap(dpa *oadpv1alpha1.DataProtectionApplication, cm *corev1.ConfigMap) error {
+func (r *DPAReconciler) buildDataMoverConfigMap(dpa *oadpv1alpha1.DataProtectionApplication, cm *corev1.ConfigMap, sc *oadpv1alpha1.DataMoverVolumeOptions, log logr.Logger) error {
 
 	if dpa == nil {
 		return fmt.Errorf("DPA CR cannot be nil")
 	}
 	if cm == nil {
-		return fmt.Errorf("datamover deployment cannot be nil")
+		return fmt.Errorf("datamover configmap cannot be nil")
 	}
 
 	cmMap := map[string]string{}
 
-	// check for source volume options
-	if dpa.Spec.Features.DataMover.DataMoverVolumeOptions.SourceVolumeOptions != nil {
-		sourceOptions := dpa.Spec.Features.DataMover.DataMoverVolumeOptions.SourceVolumeOptions
+	if sc.SourceVolumeOptions != nil {
+		sourceOptions := sc.SourceVolumeOptions
 
 		if len(sourceOptions.StorageClassName) > 0 {
 			cmMap["SourceStorageClassName"] = sourceOptions.StorageClassName
 		}
 
 		if len(sourceOptions.AccessMode) > 0 {
-			cmMap["SourceAccessMode"] = sourceOptions.AccessMode
+			cmMap["SourceAccessMode"] = string(sourceOptions.AccessMode)
 		}
 
 		if len(sourceOptions.CacheStorageClassName) > 0 {
@@ -750,21 +808,19 @@ func (r *DPAReconciler) buildDataMoverConfigMap(dpa *oadpv1alpha1.DataProtection
 		if len(sourceOptions.CacheCapacity) > 0 {
 			cmMap["SourceCacheCapacity"] = sourceOptions.CacheCapacity
 		}
-		if sourceOptions.MoverSecurityContext != nil {
-			cmMap["SourceMoverSecurityContext"] = strconv.FormatBool(*sourceOptions.MoverSecurityContext)
-		}
+
 	}
 
 	// check for destination volume options
-	if dpa.Spec.Features.DataMover.DataMoverVolumeOptions.DestinationVolumeOptions != nil {
-		destinationOptions := dpa.Spec.Features.DataMover.DataMoverVolumeOptions.DestinationVolumeOptions
+	if sc.DestinationVolumeOptions != nil {
+		destinationOptions := sc.DestinationVolumeOptions
 
 		if len(destinationOptions.StorageClassName) > 0 {
 			cmMap["DestinationStorageClassName"] = destinationOptions.StorageClassName
 		}
 
 		if len(destinationOptions.AccessMode) > 0 {
-			cmMap["DestinationAccessMode"] = destinationOptions.AccessMode
+			cmMap["DestinationAccessMode"] = string(destinationOptions.AccessMode)
 		}
 
 		if len(destinationOptions.CacheStorageClassName) > 0 {
@@ -778,9 +834,46 @@ func (r *DPAReconciler) buildDataMoverConfigMap(dpa *oadpv1alpha1.DataProtection
 		if len(destinationOptions.CacheCapacity) > 0 {
 			cmMap["DestinationCacheCapacity"] = destinationOptions.CacheCapacity
 		}
+	}
 
-		if destinationOptions.MoverSecurityContext != nil {
-			cmMap["DestinationMoverSecurityContext"] = strconv.FormatBool(*destinationOptions.MoverSecurityContext)
+	// check for SnapshotRetainPolicy parameters
+	if dpa.Spec.Features.DataMover.SnapshotRetainPolicy != nil {
+		snapshotRetainPolicy := dpa.Spec.Features.DataMover.SnapshotRetainPolicy
+
+		if len(snapshotRetainPolicy.Hourly) > 0 {
+			snapshotRetainPolicy.Hourly = strings.ReplaceAll(snapshotRetainPolicy.Hourly, `"`, "")
+			snapshotRetainPolicy.Hourly = strings.ReplaceAll(snapshotRetainPolicy.Hourly, `''`, "")
+			cmMap[SnapshotRetainPolicyHourly] = snapshotRetainPolicy.Hourly
+		}
+
+		if len(snapshotRetainPolicy.Daily) > 0 {
+			snapshotRetainPolicy.Daily = strings.ReplaceAll(snapshotRetainPolicy.Daily, `"`, "")
+			snapshotRetainPolicy.Daily = strings.ReplaceAll(snapshotRetainPolicy.Daily, `''`, "")
+			cmMap[SnapshotRetainPolicyDaily] = snapshotRetainPolicy.Daily
+		}
+
+		if len(snapshotRetainPolicy.Weekly) > 0 {
+			snapshotRetainPolicy.Weekly = strings.ReplaceAll(snapshotRetainPolicy.Weekly, `"`, "")
+			snapshotRetainPolicy.Weekly = strings.ReplaceAll(snapshotRetainPolicy.Weekly, `''`, "")
+			cmMap[SnapshotRetainPolicyWeekly] = snapshotRetainPolicy.Weekly
+		}
+
+		if len(snapshotRetainPolicy.Monthly) > 0 {
+			snapshotRetainPolicy.Monthly = strings.ReplaceAll(snapshotRetainPolicy.Monthly, `"`, "")
+			snapshotRetainPolicy.Monthly = strings.ReplaceAll(snapshotRetainPolicy.Monthly, `''`, "")
+			cmMap[SnapshotRetainPolicyMonthly] = snapshotRetainPolicy.Monthly
+		}
+
+		if len(snapshotRetainPolicy.Yearly) > 0 {
+			snapshotRetainPolicy.Yearly = strings.ReplaceAll(snapshotRetainPolicy.Yearly, `"`, "")
+			snapshotRetainPolicy.Yearly = strings.ReplaceAll(snapshotRetainPolicy.Yearly, `''`, "")
+			cmMap[SnapshotRetainPolicyYearly] = snapshotRetainPolicy.Yearly
+		}
+
+		if len(snapshotRetainPolicy.Within) > 0 {
+			snapshotRetainPolicy.Within = strings.ReplaceAll(snapshotRetainPolicy.Within, `"`, "")
+			snapshotRetainPolicy.Within = strings.ReplaceAll(snapshotRetainPolicy.Within, `''`, "")
+			cmMap[SnapshotRetainPolicyWithin] = snapshotRetainPolicy.Within
 		}
 	}
 
@@ -789,20 +882,49 @@ func (r *DPAReconciler) buildDataMoverConfigMap(dpa *oadpv1alpha1.DataProtection
 	return nil
 }
 
-func (r *DPAReconciler) checkDataMoverConfigMapExists() (*corev1.ConfigMap, bool, error) {
+func (r *DPAReconciler) validateDataMoverConfigMap(dpa *oadpv1alpha1.DataProtectionApplication) error {
 
-	// check configMap already exists
-	confmap := corev1.ConfigMap{}
-	err := r.Get(context.Background(), types.NamespacedName{Name: DataMoverConfigMapName, Namespace: r.NamespacedName.Namespace}, &confmap)
-	if err != nil {
-		if k8serror.IsNotFound(err) {
-			return nil, false, nil
-		}
-
-		return nil, false, err
+	cmLabels := map[string]string{
+		oadpv1alpha1.OadpOperatorLabel: "True",
+		oadpv1alpha1.DataMoverLabel:    "True",
+	}
+	cmListOptions := client.MatchingLabels(cmLabels)
+	cmList := corev1.ConfigMapList{}
+	if err := r.List(r.Context, &cmList, cmListOptions); err != nil {
+		return err
 	}
 
-	return &confmap, true, nil
+	for _, cfMap := range cmList.Items {
+		// configMap exists but is not configured on DPA
+		if !r.checkDataMoverConfigMapStorageClass(dpa, cfMap.Name) {
+			err := r.Delete(context.Background(), &cfMap, &client.DeleteOptions{})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *DPAReconciler) validateDataMoverStorageClass(sc string) error {
+
+	scList := storagev1api.StorageClassList{}
+	if err := r.List(r.Context, &scList, &client.ListOptions{}); err != nil {
+		return err
+	}
+
+	scFound := false
+	for _, scinCluster := range scList.Items {
+		if scinCluster.Name == sc {
+			scFound = true
+		}
+	}
+
+	if !scFound {
+		return fmt.Errorf("storageClass %v not found in cluster", sc)
+	}
+	return nil
 }
 
 func (r *DPAReconciler) parseGCPSecret(secret corev1.Secret, secretKey string) (gcpCredentials, error) {
@@ -812,4 +934,22 @@ func (r *DPAReconciler) parseGCPSecret(secret corev1.Secret, secretKey string) (
 	gcpcreds.googleApplicationCredentials = string(secret.Data[secretKey])
 
 	return gcpcreds, nil
+}
+
+func (r *DPAReconciler) addAnnotations(ns *corev1.Namespace, log logr.Logger) error {
+
+	annotations := ns.ObjectMeta.GetAnnotations()
+	if ns.ObjectMeta.Annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	annotations[common.VolsyncPrivilegedAnnotation] = "true"
+	ns.ObjectMeta.SetAnnotations(annotations)
+
+	err := r.Update(r.Context, ns, &client.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

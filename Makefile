@@ -36,8 +36,9 @@ OC_CLI = $(shell which oc)
 ifdef CLI_DIR
 	OC_CLI = ${CLI_DIR}/oc
 endif
-
-CLUSTER_TYPE ?= $(shell $(OC_CLI) get infrastructures cluster -o jsonpath='{.status.platform}' | tr A-Z a-z)
+# makes CLUSTER_TYPE quieter when unauthenticated
+CLUSTER_TYPE_SHELL := $(shell $(OC_CLI) get infrastructures cluster -o jsonpath='{.status.platform}' | tr A-Z a-z)
+CLUSTER_TYPE ?= $(CLUSTER_TYPE_SHELL)
 $(info $$CLUSTER_TYPE is [${CLUSTER_TYPE}])
 
 ifeq ($(CLUSTER_TYPE), gcp)
@@ -78,7 +79,8 @@ ginkgo: # Make sure ginkgo is in $GOPATH/bin
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 99.0.0
+DEFAULT_VERSION := 99.0.0
+VERSION ?= $(DEFAULT_VERSION)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -172,11 +174,24 @@ ENVTESTPATH = $(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)
 ifeq ($(shell $(ENVTEST) list | grep $(ENVTEST_K8S_VERSION)),)
 	ENVTESTPATH = $(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)
 endif
+$(ENVTEST): ## Download envtest-setup locally if necessary.
+	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
+.PHONY: envtest
+envtest: $(ENVTEST)
+
+.PHONY: test
 test: manifests nullables generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(ENVTESTPATH)" go test -mod=mod ./controllers/... ./pkg/... -coverprofile cover.out
+	@make bundle-isupdated GOFLAGS="-mod=mod"
 
-# if there is no native arch available, attempt to use amd64
+.PHONY: bundle-isupdated
+bundle-isupdated: TEMP:= $(shell mktemp -d)
+bundle-isupdated: VERSION:= $(DEFAULT_VERSION) #prevent VERSION overrides from https://github.com/openshift/release/blob/f1a388ab05d493b6d95b8908e28687b4c0679498/clusters/build-clusters/01_cluster/ci/_origin-release-build/golang-1.19/Dockerfile#LL9C1-L9C1
+bundle-isupdated:
+	@cp -r ./ $(TEMP) && cd $(TEMP) && make bundle && git diff --exit-code bundle && echo "bundle is up to date" || (echo "bundle is out of date, run 'make bundle' to update" && exit 1)
+	@chmod -R 777 $(TEMP) && rm -rf $(TEMP)
+
 ci-test: ## This assumes "manifests generate fmt vet envtest" ran.
 	KUBEBUILDER_ASSETS="$(ENVTESTPATH)" go test -mod=mod ./controllers/... -coverprofile cover.out
 
@@ -196,7 +211,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # from: https://github.com/containers/podman/issues/12144#issuecomment-955760527
 # related enhancements that may remove the need to manually install qemu-user-static https://bugzilla.redhat.com/show_bug.cgi?id=2061584
 DOCKER_BUILD_ARGS ?= --platform=linux/amd64
-docker-build: test ## Build docker image with the manager.
+docker-build: ## Build docker image with the manager.
 	docker build -t $(IMG) . $(DOCKER_BUILD_ARGS)
 
 docker-push: ## Push docker image with the manager.
@@ -240,10 +255,6 @@ controller-gen: ## Download controller-gen locally if necessary.
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.5)
-
-ENVTEST = $(shell pwd)/bin/setup-envtest
-envtest: ## Download envtest-setup locally if necessary.
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
 # Codecov OS String for use in download url
 ifeq ($(OS),Windows_NT)
@@ -346,7 +357,7 @@ nullable-crds-bundle: yq
 .PHONY: nullable-crds-config
 nullable-crds-config: DPA_CRD_YAML ?= config/crd/bases/oadp.openshift.io_dataprotectionapplications.yaml
 nullable-crds-config:
-	DPA_CRD_YAML=$(DPA_CRD_YAML) make nullable-crds-bundle
+	@ DPA_CRD_YAML=$(DPA_CRD_YAML) make nullable-crds-bundle
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.

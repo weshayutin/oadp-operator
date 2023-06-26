@@ -17,6 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
+	"github.com/openshift/oadp-operator/pkg/common"
+	"github.com/openshift/oadp-operator/pkg/velero/server"
 	velero "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +37,10 @@ const RegistryDeploymentLabel = "openshift.io/oadp-registry"
 const DataMoverDeploymentLabel = "openshift.io/oadp-data-mover"
 const OadpBSLnameLabel = "openshift.io/oadp-bsl-name"
 const OadpBSLProviderLabel = "openshift.io/oadp-bsl-provider"
+
+// datamover labels
+const DataMoverLabel = "openshift.io/volume-snapshot-mover"
+const StorageClassLabel = "openshift.io/vsm-storageclass"
 
 type DefaultPlugin string
 
@@ -97,6 +105,9 @@ type VeleroConfig struct {
 	// Default is 10m
 	// +optional
 	ResourceTimeout string `json:"resourceTimeout,omitempty"`
+	// Velero args are settings to customize velero server arguments. Overrides values in other fields.
+	// +optional
+	Args *server.Args `json:"args,omitempty"`
 }
 
 // PodConfig defines the pod configuration options
@@ -201,9 +212,34 @@ type DataMover struct {
 	// defines how often (in days) to prune the datamover snapshots from the repository
 	// +optional
 	PruneInterval string `json:"pruneInterval,omitempty"`
-	// defines configurations for data mover volume options
+	// defines configurations for data mover volume options for a storageClass
 	// +optional
-	DataMoverVolumeOptions *DataMoverVolumeOptions `json:"volumeOptions,omitempty"`
+	VolumeOptionsForStorageClasses map[string]DataMoverVolumeOptions `json:"volumeOptionsForStorageClasses,omitempty"`
+	// defines the parameters that can be specified for retention of datamover snapshots
+	// +optional
+	SnapshotRetainPolicy *RetainPolicy `json:"snapshotRetainPolicy,omitempty"`
+}
+
+// RetainPolicy defines the fields for retention of datamover snapshots
+type RetainPolicy struct {
+	// Hourly defines the number of snapshots to be kept hourly
+	//+optional
+	Hourly string `json:"hourly,omitempty"`
+	// Daily defines the number of snapshots to be kept daily
+	//+optional
+	Daily string `json:"daily,omitempty"`
+	// Weekly defines the number of snapshots to be kept weekly
+	//+optional
+	Weekly string `json:"weekly,omitempty"`
+	// Monthly defines the number of snapshots to be kept monthly
+	//+optional
+	Monthly string `json:"monthly,omitempty"`
+	// Yearly defines the number of snapshots to be kept yearly
+	//+optional
+	Yearly string `json:"yearly,omitempty"`
+	// Within defines the number of snapshots to be kept Within the given time period
+	//+optional
+	Within string `json:"within,omitempty"`
 }
 
 type DataMoverVolumeOptions struct {
@@ -220,7 +256,7 @@ type VolumeOptions struct {
 	// accessMode can be used to override the accessMode of the source or
 	// destination PVC
 	//+optional
-	AccessMode string `json:"accessMode,omitempty"`
+	AccessMode corev1.PersistentVolumeAccessMode `json:"accessMode,omitempty"`
 	// cacheStorageClassName is the storageClass that should be used when provisioning
 	// the data mover cache volume
 	//+optional
@@ -231,10 +267,6 @@ type VolumeOptions struct {
 	// cacheAccessMode is the access mode to be used to provision the cache volume
 	//+optional
 	CacheAccessMode string `json:"cacheAccessMode,omitempty"`
-	// moverSecurityContext allows enabling the PodSecurityContext used in
-	// the application pod(s)
-	//+optional
-	MoverSecurityContext *bool `json:"moverSecurityContext,omitempty"`
 }
 
 // Features defines the configuration for the DPA to enable the tech preview features
@@ -330,4 +362,42 @@ func (veleroConfig *VeleroConfig) HasFeatureFlag(flag string) bool {
 
 func init() {
 	SchemeBuilder.Register(&DataProtectionApplication{}, &DataProtectionApplicationList{}, &CloudStorage{}, &CloudStorageList{})
+}
+
+// AutoCorrect is a collection of auto-correction functions for the DPA CR
+// These auto corrects are in-memory only and do not persist to the CR
+// There should not be another place where these auto-corrects are done
+func (dpa *DataProtectionApplication) AutoCorrect() {
+	//check if CSI plugin is added in spec
+	if hasCSIPlugin(dpa.Spec.Configuration.Velero.DefaultPlugins) {
+		dpa.Spec.Configuration.Velero.FeatureFlags = append(dpa.Spec.Configuration.Velero.FeatureFlags, velero.CSIFeatureFlag)
+	}
+	if dpa.Spec.Configuration.Velero.RestoreResourcesVersionPriority != "" {
+		// if the RestoreResourcesVersionPriority is specified then ensure feature flag is enabled for enableApiGroupVersions
+		// duplicate feature flag checks are done in ReconcileVeleroDeployment
+		dpa.Spec.Configuration.Velero.FeatureFlags = append(dpa.Spec.Configuration.Velero.FeatureFlags, velero.APIGroupVersionsFeatureFlag)
+	}
+	if dpa.Spec.Configuration.Velero.Args != nil {
+		// if args is not nil, we take care of some fields that will be overridden from dpa if not specified in args
+		// Enable user to specify --fs-backup-timeout duration (OADP default 1h0m0s)
+		resticTimeout := "1h"
+		if dpa.Spec.Configuration != nil && dpa.Spec.Configuration.Restic != nil && len(dpa.Spec.Configuration.Restic.Timeout) > 0 {
+			resticTimeout = dpa.Spec.Configuration.Restic.Timeout
+		}
+		if pvOperationTimeout, err := time.ParseDuration(resticTimeout); err == nil && dpa.Spec.Configuration.Velero.Args.PodVolumeOperationTimeout == nil {
+			dpa.Spec.Configuration.Velero.Args.PodVolumeOperationTimeout = &pvOperationTimeout
+		}
+	}
+	dpa.Spec.Configuration.Velero.DefaultPlugins = common.RemoveDuplicateValues(dpa.Spec.Configuration.Velero.DefaultPlugins)
+	dpa.Spec.Configuration.Velero.FeatureFlags = common.RemoveDuplicateValues(dpa.Spec.Configuration.Velero.FeatureFlags)
+}
+
+func hasCSIPlugin(plugins []DefaultPlugin) bool {
+	for _, plugin := range plugins {
+		if plugin == DefaultPluginCSI {
+			// CSI plugin is added so ensure that CSI feature flags is set
+			return true
+		}
+	}
+	return false
 }

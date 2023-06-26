@@ -444,10 +444,8 @@ func RunMustGather(oc_cli string, artifact_dir string) error {
 	mustGatherCmd := "must-gather"
 	mustGatherImg := "--image=quay.io/konveyor/oadp-must-gather:latest"
 	destDir := "--dest-dir=" + artifact_dir
-	logCmdPmt := "--"
-	logCmd := "gather_logs_without_zip"
 
-	cmd := exec.Command(ocClient, ocAdmin, mustGatherCmd, mustGatherImg, destDir, logCmdPmt, logCmd)
+	cmd := exec.Command(ocClient, ocAdmin, mustGatherCmd, mustGatherImg, destDir)
 	_, err := cmd.Output()
 	return err
 }
@@ -568,7 +566,7 @@ func VerifyBackupRestoreData(artifact_dir string, namespace string, routeName st
 	return nil
 }
 
-//VerifyVolumeData for application with two volumes
+// VerifyVolumeData for application with two volumes
 func verifyVolume(volumeFile string, volumeApi string, prebackupState bool, backupRestoretype BackupRestoreType) error {
 	if prebackupState {
 		// delete volumeFile if it exists
