@@ -1,0 +1,120 @@
+Name:         [1mrestore-vm-1[0m
+Namespace:    openshift-adp
+Labels:       <none>
+Annotations:  <none>
+
+Phase:                       [32mCompleted[0m
+Total items to be restored:  39
+Items restored:              39
+
+Started:    2023-07-26 15:34:51 +0000 UTC
+Completed:  2023-07-26 15:37:53 +0000 UTC
+
+Warnings:
+  Velero:     <none>
+  Cluster:  could not restore, CustomResourceDefinition "clusterserviceversions.operators.coreos.com" already exists. Warning: the in-cluster version is different than the backed-up version.
+            could not restore, CustomResourceDefinition "datavolumes.cdi.kubevirt.io" already exists. Warning: the in-cluster version is different than the backed-up version.
+            could not restore, CustomResourceDefinition "virtualmachineinstances.kubevirt.io" already exists. Warning: the in-cluster version is different than the backed-up version.
+            could not restore, CustomResourceDefinition "virtualmachines.kubevirt.io" already exists. Warning: the in-cluster version is different than the backed-up version.
+  Namespaces:
+    test-vm:  could not restore, ConfigMap "kube-root-ca.crt" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, ConfigMap "openshift-service-ca.crt" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, ClusterServiceVersion "volsync-product.v0.7.3" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "system:deployers" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "system:image-builders" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "system:image-pullers" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "admin" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "system:deployers" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "system:image-builders" already exists. Warning: the in-cluster version is different than the backed-up version.
+              could not restore, RoleBinding "system:image-pullers" already exists. Warning: the in-cluster version is different than the backed-up version.
+
+Backup:  backup-vm-1
+
+Namespaces:
+  Included:  all namespaces found in the backup
+  Excluded:  <none>
+
+Resources:
+  Included:        *
+  Excluded:        nodes, events, events.events.k8s.io, backups.velero.io, restores.velero.io, resticrepositories.velero.io, csinodes.storage.k8s.io, volumeattachments.storage.k8s.io, backuprepositories.velero.io
+  Cluster-scoped:  auto
+
+Namespace mappings:  <none>
+
+Label selector:  <none>
+
+Restore PVs:  true
+
+Existing Resource Policy:   <none>
+ItemOperationTimeout:       1h0m0s
+
+Preserve Service NodePorts:  auto
+
+Restore Item Operations:
+  Operation for volumesnapshotbackups.datamover.oadp.openshift.io test-vm/vsb-ztpsc:
+    Restore Item Action Plugin:  velero.io/vsm-datamover-restorer
+    Operation ID:                test-vm/vsr-jkxm2
+    Phase:                       Completed
+    Progress description:        Phase: Completed BatchingStatus: Completed
+    Created:                     2023-07-26 15:35:21 +0000 UTC
+    Started:                     2023-07-26 15:35:21 +0000 UTC
+    Updated:                     2023-07-26 15:37:45 +0000 UTC
+Resource List:
+  apiextensions.k8s.io/v1/CustomResourceDefinition:
+    - clusterserviceversions.operators.coreos.com(failed)
+    - datavolumes.cdi.kubevirt.io(failed)
+    - virtualmachineinstances.kubevirt.io(failed)
+    - virtualmachines.kubevirt.io(failed)
+  apps/v1/ControllerRevision:
+    - test-vm/revision-start-vm-14b3bf25-86a4-4a58-ad6f-7f1aee88c94c-1(created)
+    - test-vm/revision-start-vm-c442b8da-0d91-4976-89e5-fe7f1c52f8ca-1(created)
+  authorization.openshift.io/v1/RoleBinding:
+    - test-vm/admin(created)
+    - test-vm/system:deployers(failed)
+    - test-vm/system:image-builders(failed)
+    - test-vm/system:image-pullers(failed)
+  cdi.kubevirt.io/v1beta1/DataVolume:
+    - test-vm/test-vm-dv(created)
+  datamover.oadp.openshift.io/v1alpha1/VolumeSnapshotBackup:
+    - test-vm/vsb-ztpsc(skipped)
+  kubevirt.io/v1/VirtualMachine:
+    - test-vm/oadp-197(created)
+    - test-vm/vm-cirros(created)
+  kubevirt.io/v1/VirtualMachineInstance:
+    - test-vm/oadp-197(skipped)
+    - test-vm/vm-cirros(skipped)
+  operators.coreos.com/v1alpha1/ClusterServiceVersion:
+    - test-vm/volsync-product.v0.7.3(failed)
+  rbac.authorization.k8s.io/v1/RoleBinding:
+    - test-vm/admin(failed)
+    - test-vm/system:deployers(failed)
+    - test-vm/system:image-builders(failed)
+    - test-vm/system:image-pullers(failed)
+  snapshot.storage.k8s.io/v1/VolumeSnapshot:
+    - test-vm/velero-test-vm-dv-q5n7s(created)
+  snapshot.storage.k8s.io/v1/VolumeSnapshotClass:
+    - cephrbd-velero(skipped)
+  snapshot.storage.k8s.io/v1/VolumeSnapshotContent:
+    - snapcontent-43453281-5762-47ac-b045-65523ed5e7e0(skipped)
+  v1/ConfigMap:
+    - test-vm/kube-root-ca.crt(failed)
+    - test-vm/openshift-service-ca.crt(failed)
+  v1/PersistentVolume:
+    - pvc-da8fd996-f46f-4e78-93f1-fa09629589c1(skipped)
+  v1/PersistentVolumeClaim:
+    - test-vm/test-vm-dv(created)
+  v1/Pod:
+    - test-vm/virt-launcher-oadp-197-qp7ns(skipped)
+    - test-vm/virt-launcher-vm-cirros-ckqvx(skipped)
+  v1/Secret:
+    - test-vm/builder-dockercfg-5n2rl(created)
+    - test-vm/builder-token-dqpdx(skipped)
+    - test-vm/default-dockercfg-dfz7g(created)
+    - test-vm/default-token-q7x48(skipped)
+    - test-vm/deployer-dockercfg-kv49h(created)
+    - test-vm/deployer-token-szmdk(skipped)
+  v1/ServiceAccount:
+    - test-vm/builder(skipped)
+    - test-vm/default(skipped)
+    - test-vm/deployer(skipped)
+

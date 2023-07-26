@@ -1,0 +1,46 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: StorageProfile
+metadata:
+  creationTimestamp: "2023-07-25T06:13:38Z"
+  generation: 13
+  labels:
+    app: containerized-data-importer
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/managed-by: cdi-controller
+    app.kubernetes.io/part-of: hyperconverged-cluster
+    app.kubernetes.io/version: 4.13.3
+    cdi.kubevirt.io: ""
+  name: ocs-storagecluster-ceph-rbd
+  ownerReferences:
+  - apiVersion: cdi.kubevirt.io/v1beta1
+    blockOwnerDeletion: true
+    controller: true
+    kind: CDI
+    name: cdi-kubevirt-hyperconverged
+    uid: b46072bd-0623-497b-b91d-ef1e218d090e
+  resourceVersion: "984109"
+  uid: de466004-824e-4192-bb1b-89fdf0c852d2
+spec:
+  claimPropertySets:
+  - accessModes:
+    - ReadWriteMany
+    volumeMode: Filesystem
+  - accessModes:
+    - ReadWriteOnce
+    volumeMode: Filesystem
+  - accessModes:
+    - ReadWriteOnce
+    volumeMode: Filesystem
+status:
+  claimPropertySets:
+  - accessModes:
+    - ReadWriteMany
+    volumeMode: Filesystem
+  - accessModes:
+    - ReadWriteOnce
+    volumeMode: Filesystem
+  - accessModes:
+    - ReadWriteOnce
+    volumeMode: Filesystem
+  provisioner: openshift-storage.rbd.csi.ceph.com
+  storageClass: ocs-storagecluster-ceph-rbd

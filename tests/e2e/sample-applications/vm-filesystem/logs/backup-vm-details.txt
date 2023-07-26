@@ -1,0 +1,180 @@
+Name:         [1mbackup-vm-1[0m
+Namespace:    openshift-adp
+Labels:       velero.io/storage-location=ts-dpa-1
+Annotations:  velero.io/source-cluster-k8s-gitversion=v1.26.6+73ac561
+              velero.io/source-cluster-k8s-major-version=1
+              velero.io/source-cluster-k8s-minor-version=26
+
+Phase:  [32mCompleted[0m
+
+
+Namespaces:
+  Included:  test-vm
+  Excluded:  <none>
+
+Resources:
+  Included:        *
+  Excluded:        <none>
+  Cluster-scoped:  auto
+
+Label selector:  <none>
+
+Storage Location:  ts-dpa-1
+
+Velero-Native Snapshot PVs:  auto
+
+TTL:  1h0m0s
+
+CSISnapshotTimeout:    10m0s
+ItemOperationTimeout:  1h0m0s
+
+Hooks:  <none>
+
+Backup Format Version:  1.1.0
+
+Started:    2023-07-26 15:25:43 +0000 UTC
+Completed:  2023-07-26 15:27:32 +0000 UTC
+
+Expiration:  2023-07-26 16:25:43 +0000 UTC
+
+Backup Item Operations:
+  Operation for volumesnapshotcontents.snapshot.storage.k8s.io /snapcontent-43453281-5762-47ac-b045-65523ed5e7e0:
+    Backup Item Action Plugin:  velero.io/vsm-volumesnapshotcontent-backupper
+    Operation ID:               test-vm/vsb-ztpsc
+    Items to Update:
+                           volumesnapshotbackups.datamover.oadp.openshift.io test-vm/vsb-ztpsc
+    Phase:                 Completed
+    Progress description:  Phase: Completed BatchingStatus: Completed
+    Created:               2023-07-26 15:26:03 +0000 UTC
+    Started:               2023-07-26 15:26:08 +0000 UTC
+    Updated:               2023-07-26 15:27:27 +0000 UTC
+Resource List:
+  apiextensions.k8s.io/v1/CustomResourceDefinition:
+    - clusterserviceversions.operators.coreos.com
+    - datavolumes.cdi.kubevirt.io
+    - virtualmachineinstances.kubevirt.io
+    - virtualmachines.kubevirt.io
+  apps/v1/ControllerRevision:
+    - test-vm/revision-start-vm-14b3bf25-86a4-4a58-ad6f-7f1aee88c94c-1
+    - test-vm/revision-start-vm-c442b8da-0d91-4976-89e5-fe7f1c52f8ca-1
+  authorization.openshift.io/v1/RoleBinding:
+    - test-vm/admin
+    - test-vm/system:deployers
+    - test-vm/system:image-builders
+    - test-vm/system:image-pullers
+  cdi.kubevirt.io/v1beta1/DataVolume:
+    - test-vm/test-vm-dv
+  kubevirt.io/v1/VirtualMachine:
+    - test-vm/oadp-197
+    - test-vm/vm-cirros
+  kubevirt.io/v1/VirtualMachineInstance:
+    - test-vm/oadp-197
+    - test-vm/vm-cirros
+  operators.coreos.com/v1alpha1/ClusterServiceVersion:
+    - test-vm/volsync-product.v0.7.3
+  rbac.authorization.k8s.io/v1/RoleBinding:
+    - test-vm/admin
+    - test-vm/system:deployers
+    - test-vm/system:image-builders
+    - test-vm/system:image-pullers
+  snapshot.storage.k8s.io/v1/VolumeSnapshot:
+    - test-vm/velero-test-vm-dv-q5n7s
+  snapshot.storage.k8s.io/v1/VolumeSnapshotClass:
+    - cephrbd-velero
+  snapshot.storage.k8s.io/v1/VolumeSnapshotContent:
+    - snapcontent-43453281-5762-47ac-b045-65523ed5e7e0
+  v1/ConfigMap:
+    - test-vm/kube-root-ca.crt
+    - test-vm/openshift-service-ca.crt
+  v1/Event:
+    - test-vm/importer-test-vm-dv.17757311e13ec6bb
+    - test-vm/importer-test-vm-dv.17757312097b3df7
+    - test-vm/importer-test-vm-dv.17757312f8385207
+    - test-vm/importer-test-vm-dv.17757312fc172def
+    - test-vm/importer-test-vm-dv.177573130573942d
+    - test-vm/importer-test-vm-dv.177573130a402207
+    - test-vm/importer-test-vm-dv.177573133549e4bf
+    - test-vm/importer-test-vm-dv.177573134079718f
+    - test-vm/importer-test-vm-dv.177573134491a78c
+    - test-vm/importer-test-vm-dv.1775731344a5c434
+    - test-vm/importer-test-vm-dv.177573151c2c2b8f
+    - test-vm/importer-test-vm-dv.1775731524d9029e
+    - test-vm/importer-test-vm-dv.1775731526deb856
+    - test-vm/importer-test-vm-dv.177573e06c6bfe49
+    - test-vm/importer-test-vm-dv.177573e08f4ec235
+    - test-vm/importer-test-vm-dv.177573e206b3e82d
+    - test-vm/importer-test-vm-dv.177573e20a6ba023
+    - test-vm/importer-test-vm-dv.177573e2132ca3ce
+    - test-vm/importer-test-vm-dv.177573e2167e00c1
+    - test-vm/importer-test-vm-dv.177573e23f677551
+    - test-vm/importer-test-vm-dv.177573e248eea2fb
+    - test-vm/importer-test-vm-dv.177573e24b082142
+    - test-vm/importer-test-vm-dv.177573e24b121482
+    - test-vm/importer-test-vm-dv.177573e254568e1c
+    - test-vm/importer-test-vm-dv.177573e256005d36
+    - test-vm/oadp-197.17757311c5981e90
+    - test-vm/oadp-197.1775731a6a5240f8
+    - test-vm/oadp-197.1775731a6d4b79c6
+    - test-vm/oadp-197.1775731d2d882d20
+    - test-vm/oadp-197.1775731d33912419
+    - test-vm/oadp-197.177573bff7bd3b94
+    - test-vm/oadp-197.177573bff858e0c1
+    - test-vm/oadp-197.177573c0053bc2ab
+    - test-vm/oadp-197.177573c006dfe057
+    - test-vm/oadp-197.177573c009fce038
+    - test-vm/oadp-197.177573e05e8a7236
+    - test-vm/oadp-197.177573e7a7416e15
+    - test-vm/oadp-197.177573e7a8b5130d
+    - test-vm/oadp-197.177573ea0ec24b44
+    - test-vm/oadp-197.177573ea157cdbf4
+    - test-vm/test-vm-dv.17757311c6f3e1eb
+    - test-vm/test-vm-dv.17757311cb84c6a0
+    - test-vm/test-vm-dv.17757311cba4dae5
+    - test-vm/test-vm-dv.17757311d794ac2f
+    - test-vm/test-vm-dv.17757311df0ff8a8
+    - test-vm/test-vm-dv.177573155b7c862c
+    - test-vm/test-vm-dv.1775731a089a77ca
+    - test-vm/test-vm-dv.1775731a6604c8cd
+    - test-vm/test-vm-dv.1775731a66a18350
+    - test-vm/test-vm-dv.177573e05fc137e6
+    - test-vm/test-vm-dv.177573e0625ff8d6
+    - test-vm/test-vm-dv.177573e062875cec
+    - test-vm/test-vm-dv.177573e06839e971
+    - test-vm/test-vm-dv.177573e06ad24f92
+    - test-vm/test-vm-dv.177573e27dbfb579
+    - test-vm/test-vm-dv.177573e72af9e295
+    - test-vm/test-vm-dv.177573e7a3fd2b9b
+    - test-vm/test-vm-dv.177573e7a4b51dbe
+    - test-vm/virt-launcher-oadp-197-2w4pm.1775731a6eb96b38
+    - test-vm/virt-launcher-oadp-197-2w4pm.1775731c734702d2
+    - test-vm/virt-launcher-oadp-197-2w4pm.1775731c764aab3a
+    - test-vm/virt-launcher-oadp-197-2w4pm.1775731c81765516
+    - test-vm/virt-launcher-oadp-197-2w4pm.1775731c84659897
+    - test-vm/virt-launcher-oadp-197-2w4pm.177573bff8f5c936
+    - test-vm/virt-launcher-oadp-197-qp7ns.177573e7a9d7be50
+    - test-vm/virt-launcher-oadp-197-qp7ns.177573e971abf160
+    - test-vm/virt-launcher-oadp-197-qp7ns.177573e97516b5a2
+    - test-vm/virt-launcher-oadp-197-qp7ns.177573e9820951eb
+    - test-vm/virt-launcher-oadp-197-qp7ns.177573e984d1122d
+  v1/Namespace:
+    - test-vm
+  v1/PersistentVolume:
+    - pvc-da8fd996-f46f-4e78-93f1-fa09629589c1
+  v1/PersistentVolumeClaim:
+    - test-vm/test-vm-dv
+  v1/Pod:
+    - test-vm/virt-launcher-oadp-197-qp7ns
+    - test-vm/virt-launcher-vm-cirros-ckqvx
+  v1/Secret:
+    - test-vm/builder-dockercfg-5n2rl
+    - test-vm/builder-token-dqpdx
+    - test-vm/default-dockercfg-dfz7g
+    - test-vm/default-token-q7x48
+    - test-vm/deployer-dockercfg-kv49h
+    - test-vm/deployer-token-szmdk
+  v1/ServiceAccount:
+    - test-vm/builder
+    - test-vm/default
+    - test-vm/deployer
+
+Velero-Native Snapshots: <none included>

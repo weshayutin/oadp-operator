@@ -1,0 +1,15 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataSource
+metadata:
+  annotations:
+    description: cirros
+  name: cirrosfilesystemrwo
+  namespace: openshift-virtualization-os-images
+  labels:
+    instancetype.kubevirt.io/default-instancetype: n1.medium
+    instancetype.kubevirt.io/default-preference: cirros
+spec:
+  source:
+    pvc:
+      name: import-cirros-filesystem-rwo
+      namespace: openshift-virtualization-os-images
