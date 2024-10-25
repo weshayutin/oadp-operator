@@ -34,5 +34,5 @@ We have limited time and resources. Choices have to be made with regards to how 
 - label:priority/important-soon
 - label:priority/important-longterm
 
-The team should review the above issues every 3 to 6 months. Do not expect reviews or comments on issues or PRs with the above labels. 
+The team should triage the above issues every 3 to 6 months. Do not expect reviews or comments on issues or PRs with the above labels. 
 
