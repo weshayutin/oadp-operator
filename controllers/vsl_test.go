@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	oadpv1alpha1 "github.com/openshift/oadp-operator/api/v1alpha1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +12,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	oadpv1alpha1 "github.com/openshift/oadp-operator/api/v1alpha1"
 )
 
 func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
@@ -43,10 +44,82 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					Name:      "cloud-credentials",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
+			},
+		},
+
+		{
+			name: "test VSL with invalid provider specified",
+			dpa: &oadpv1alpha1.DataProtectionApplication{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-Velero-VSL-invalid-provider",
+					Namespace: "test-ns",
+				},
+				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
+					Configuration: &oadpv1alpha1.ApplicationConfig{
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginAWS,
+								oadpv1alpha1.DefaultPluginGCP,
+								oadpv1alpha1.DefaultPluginMicrosoftAzure,
+							},
+						},
+					},
+					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
+						{
+							Velero: &velerov1.VolumeSnapshotLocationSpec{
+								Provider: "invalid-provider",
+							},
+						},
+					},
+				},
+			},
+			want:    false,
+			wantErr: true,
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cloud-credentials",
+					Namespace: "test-ns",
+				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 
 		// AWS tests
+		{
+			name: "test AWS VSL with AWS plugin missing",
+			dpa: &oadpv1alpha1.DataProtectionApplication{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-Velero-VSL-aws-plugin-missing",
+					Namespace: "test-ns",
+				},
+				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
+					Configuration: &oadpv1alpha1.ApplicationConfig{
+						Velero: &oadpv1alpha1.VeleroConfig{},
+					},
+					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
+						{
+							Velero: &velerov1.VolumeSnapshotLocationSpec{
+								Provider: AWSProvider,
+								Config: map[string]string{
+									Region: "us-east-1",
+								},
+							},
+						},
+					},
+				},
+			},
+			want:    false,
+			wantErr: true,
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cloud-credentials",
+					Namespace: "test-ns",
+				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
+			},
+		},
+
 		{
 			name: "test AWS VSL with only region specified",
 			dpa: &oadpv1alpha1.DataProtectionApplication{
@@ -56,7 +129,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginAWS,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -77,6 +154,7 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					Name:      "cloud-credentials",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -106,6 +184,7 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					Name:      "cloud-credentials",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -117,7 +196,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginAWS,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -139,6 +222,7 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					Name:      "cloud-credentials",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -172,6 +256,7 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					Name:      "cloud-credentials",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 
@@ -181,6 +266,40 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			dpa: &oadpv1alpha1.DataProtectionApplication{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-Velero-VSL",
+					Namespace: "test-ns",
+				},
+				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
+					Configuration: &oadpv1alpha1.ApplicationConfig{
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginGCP,
+							},
+						},
+					},
+					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
+						{
+							Velero: &velerov1.VolumeSnapshotLocationSpec{
+								Provider: GCPProvider,
+							},
+						},
+					},
+				},
+			},
+			want:    true,
+			wantErr: false,
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cloud-credentials-gcp",
+					Namespace: "test-ns",
+				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
+			},
+		},
+		{
+			name: "test GCP VSL with GCP plugin missing",
+			dpa: &oadpv1alpha1.DataProtectionApplication{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-Velero-VSL-GCP-plugin-missing",
 					Namespace: "test-ns",
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
@@ -196,13 +315,14 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					},
 				},
 			},
-			want:    true,
-			wantErr: false,
+			want:    false,
+			wantErr: true,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-gcp",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -214,7 +334,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginGCP,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -232,9 +356,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: false,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-gcp",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -246,7 +371,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginGCP,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -264,9 +393,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: false,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-gcp",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -296,9 +426,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: true,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-gcp",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 
@@ -308,6 +439,40 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			dpa: &oadpv1alpha1.DataProtectionApplication{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-Velero-VSL",
+					Namespace: "test-ns",
+				},
+				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
+					Configuration: &oadpv1alpha1.ApplicationConfig{
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginMicrosoftAzure,
+							},
+						},
+					},
+					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
+						{
+							Velero: &velerov1.VolumeSnapshotLocationSpec{
+								Provider: AzureProvider,
+							},
+						},
+					},
+				},
+			},
+			want:    true,
+			wantErr: false,
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cloud-credentials-azure",
+					Namespace: "test-ns",
+				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
+			},
+		},
+		{
+			name: "test Azure VSL with Azure plugin missing",
+			dpa: &oadpv1alpha1.DataProtectionApplication{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-Velero-VSL-Azure-plugin-missing",
 					Namespace: "test-ns",
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
@@ -323,13 +488,14 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					},
 				},
 			},
-			want:    true,
-			wantErr: false,
+			want:    false,
+			wantErr: true,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-azure",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -341,7 +507,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginMicrosoftAzure,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -359,9 +529,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: false,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-azure",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -373,7 +544,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginMicrosoftAzure,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -391,9 +566,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: false,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-azure",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -405,7 +581,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginMicrosoftAzure,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -423,9 +603,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: false,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-azure",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -437,7 +618,11 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 				},
 				Spec: oadpv1alpha1.DataProtectionApplicationSpec{
 					Configuration: &oadpv1alpha1.ApplicationConfig{
-						Velero: &oadpv1alpha1.VeleroConfig{},
+						Velero: &oadpv1alpha1.VeleroConfig{
+							DefaultPlugins: []oadpv1alpha1.DefaultPlugin{
+								oadpv1alpha1.DefaultPluginMicrosoftAzure,
+							},
+						},
 					},
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
@@ -455,9 +640,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: false,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-azure",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 		{
@@ -474,7 +660,7 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					SnapshotLocations: []oadpv1alpha1.SnapshotLocation{
 						{
 							Velero: &velerov1.VolumeSnapshotLocationSpec{
-								Provider: GCPProvider,
+								Provider: AzureProvider,
 								Config: map[string]string{
 									"invalid-test": "foo",
 								},
@@ -487,9 +673,10 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 			wantErr: true,
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cloud-credentials",
+					Name:      "cloud-credentials-azure",
 					Namespace: "test-ns",
 				},
+				Data: map[string][]byte{"cloud": []byte("dummy_data")},
 			},
 		},
 	}
@@ -509,8 +696,9 @@ func TestDPAReconciler_ValidateVolumeSnapshotLocation(t *testing.T) {
 					Name:      tt.dpa.Name,
 				},
 				EventRecorder: record.NewFakeRecorder(10),
+				dpa:           tt.dpa,
 			}
-			got, err := r.ValidateVolumeSnapshotLocations(r.Log)
+			got, err := r.ValidateVolumeSnapshotLocations()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateVolumeSnapshotLocations() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -573,6 +761,7 @@ func TestDPAReconciler_ReconcileVolumeSnapshotLocations(t *testing.T) {
 					Name:      tt.dpa.Name,
 				},
 				EventRecorder: record.NewFakeRecorder(10),
+				dpa:           tt.dpa,
 			}
 			wantVSL := &velerov1.VolumeSnapshotLocation{
 				ObjectMeta: metav1.ObjectMeta{

@@ -3,18 +3,28 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     capabilities: Seamless Upgrades
-    categories: OpenShift Optional
+    categories: |
+      Cloud Provider,Developer Tools,Modernization & Migration,OpenShift Optional,Storage
     certified: "false"
     containerImage: quay.io/konveyor/oadp-operator:latest
     createdAt: "2020-09-08T12:21:00Z"
     description: OADP (OpenShift API for Data Protection) operator sets up and installs
       Data Protection Applications on the OpenShift platform.
+    features.operators.openshift.io/cnf: "false"
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/csi: "false"
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "true"
+    features.operators.openshift.io/proxy-aware: "true"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "true"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
     olm.skipRange: '>=0.0.0 <99.0.0'
-    operatorframework.io/cluster-monitoring: "true"
     operatorframework.io/suggested-namespace: openshift-adp
     operators.openshift.io/infrastructure-features: '["Disconnected"]'
-    operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift
-      Platform Plus"]'
+    operators.openshift.io/valid-subscription: '["OpenShift Kubernetes Engine", "OpenShift
+      Container Platform", "OpenShift Platform Plus"]'
     repository: https://github.com/openshift/oadp-operator
     support: Red Hat
   labels:
@@ -65,7 +75,7 @@ spec:
         displayName: Phase
         path: phase
       - description: LastSyncedTime is the last time the contents of the location
-          weer synced into
+          were synced into
         displayName: LastSyncedTime
         path: lastSyncedTime
       - description: LastValidationTime is the last time the backup store location
@@ -73,7 +83,7 @@ spec:
         displayName: LastValidationTime
         path: lastValidationTime
       version: v1
-    - description: Backup is a Velero resource that respresents the capture of Kubernetes
+    - description: Backup is a Velero resource that represents the capture of Kubernetes
         cluster state at a point in time (API objects and associated volume state).
       displayName: Backup
       kind: Backup
@@ -88,7 +98,7 @@ spec:
         displayName: Expiration
         path: expiration
       - description: Format Version is the backup format version, including major,
-          minor, and patch verison.
+          minor, and patch version.
         displayName: FormatVersion
         path: formatVersion
       - description: Phase is the current state of the Backup
@@ -96,11 +106,11 @@ spec:
         path: phase
       - description: Progress contains information about the backup's execution progress.
           Note that this information is best-effort only -- if Velero fails to update
-          it during a backup for any reason, itm= may be inaccurate/stale.
+          it during a backup for any reason, it may be inaccurate/stale.
         displayName: Progress
         path: progress
       - description: Start Timestamp records the time a backup was started. Separate
-          from CreationTimestamp, since that value vhanges on restores. The server's
+          from CreationTimestamp, since that value changes on restores. The server's
           time is used for StartTimestamps.
         displayName: StartTimestamp
         path: startTimestamp
@@ -305,6 +315,97 @@ spec:
         displayName: Phase
         path: phase
       version: v1
+    - description: DataDownload represents a data download of a volume snapshot. There
+        is one DataDownload created per volume to be restored.
+      displayName: DataDownload
+      kind: DataDownload
+      name: datadownloads.velero.io
+      statusDescriptors:
+      - description: Phase is the current state of the DataDownload.
+        displayName: Phase
+        path: phase
+      - description: CompletionTimestamp records the time a restore was completed.
+          Completion time is recorded even on failed restores. The server's time is
+          used for CompletionTimestamps
+        displayName: CompletionTimestamp
+        path: completionTimestamp
+      - description: Message is a message about the current status of the BackupRepository.
+        displayName: Message
+        path: message
+      - description: Node is the name of the node where the DataDownload is processed.
+        displayName: Node
+        path: node
+      - description: Progress holds the total number of bytes of the snapshot and
+          the current number of restored bytes. This can be used to display progress
+          information about the restore operation.
+        displayName: Progress
+        path: progress
+      - description: StartTimestamp records the time a restore was started. The server's
+          time is used for StartTimestamps
+        displayName: StartTimestamp
+        path: startTimestamp
+      version: v2alpha1
+    - description: DataUpload acts as the protocol between data mover plugins and
+        data mover controller for the datamover backup operation
+      displayName: DataUpload
+      kind: DataUpload
+      name: datauploads.velero.io
+      statusDescriptors:
+      - description: CompletionTimestamp records the time a backup was completed.
+          Completion time is recorded even on failed backups. Completion time is recorded
+          before uploading the backup object. The server's time is used for CompletionTimestamps
+        displayName: CompletionTimestamp
+        path: completionTimestamp
+      - description: DataMoverResult stores data-mover-specific information as a result
+          of the DataUpload.
+        displayName: DataMoverResult
+        path: dataMoverResult
+      - description: Message is a message about the DataUpload's status.
+        displayName: Message
+        path: message
+      - description: Node is the name of the node where the DataUpload is processed.
+        displayName: Node
+        path: node
+      - description: Path is the full path of the snapshot volume being backed up.
+        displayName: Path
+        path: path
+      - description: Phase is the current state of the DataUpload.
+        displayName: Phase
+        path: phase
+      - description: Progress holds the total number of bytes of the volume and the
+          current number of backed up bytes. This can be used to display progress
+          information about the backup operation.
+        displayName: Progress
+        path: progress
+      - description: SnapshotID is the identifier for the snapshot in the backup repository.
+        displayName: SnapshotID
+        path: snapshotID
+      - description: StartTimestamp records the time a backup was started. Separate
+          from CreationTimestamp, since that value changes on restores. The server's
+          time is used for StartTimestamps
+        displayName: StartTimestamp
+        path: startTimestamp
+      version: v2alpha1
+    - description: The CloudStorage API automates the creation of a bucket for object
+        storage.
+      displayName: CloudStorage
+      kind: CloudStorage
+      name: cloudstorages.oadp.openshift.io
+      statusDescriptors:
+      - description: LastSyncTimestamp is the last time the contents of the CloudStorage
+          was synced
+        displayName: LastSyncTimestamp
+        path: lastSyncTimestamp
+      - description: Name is the name requested for the bucket (aws, gcp) or container
+          (azure)
+        displayName: Name
+        path: name
+      version: v1alpha1
+    - description: NonAdminBackup is the Schema for the nonadminbackups API
+      displayName: Non Admin Backup
+      kind: NonAdminBackup
+      name: nonadminbackups.nac.oadp.openshift.io
+      version: v1alpha1
   description: |
     **OpenShift API for Data Protection (OADP)** operator sets up and installs
     Velero on the OpenShift platform, allowing users to backup and restore
@@ -318,13 +419,16 @@ spec:
     an archive file on object storage. OADP backs up persistent volumes
     (PVs) by creating snapshots with the native cloud snapshot API or with
     the Container Storage Interface (CSI). For cloud providers that do not
-    support snapshots, OADP backs up resources and PV data with Restic.
+    support snapshots, OADP backs up resources and PV data with Restic or Kopia.
 
     * [Installing OADP for application backup and restore][install-doc]
+
+    * [Installing OADP on a ROSA cluster and using STS, please follow the Getting Started Steps 1-3 in order to obtain the role ARN needed for using the standardized STS configuration flow via OLM][rosa-sts-doc]
 
     * [Frequently Asked Questions][faq-doc]
 
     [install-doc]: https://docs.openshift.com/container-platform/latest/backup_and_restore/application_backup_and_restore/installing/about-installing-oadp.html
+    [rosa-sts-doc]: https://mobb.ninja/docs/misc/oadp/rosa-sts/
     [faq-doc]: https://access.redhat.com/articles/5456281
   displayName: OADP Operator
   icon:
@@ -344,17 +448,44 @@ spec:
   - supported: false
     type: AllNamespaces
   keywords:
+  - disaster backup
+  - disaster recovery
+  - disaster restore
+  - disaster
+  - backup
+  - restore
+  - backup automation
+  - recovery
+  - data protection
+  - data management
+  - data
+  - protection
+  - management
+  - application resilience
+  - resilience
   - velero
   - openshift
   - oadp
+  - cloud-native
+  - replication
+  - kopia
+  - restic
+  - network file system
+  - nfs
+  - simple cloud storage
+  - s3
+  - minio
+  - cloud storage
+  - data foundation
+  - ceph
+  - csi
+  - container storage interface
   links:
   - name: OADP Operator
     url: https://github.com/openshift/oadp-operator
   maintainers:
-  - email: dymurray@redhat.com
-    name: Dylan Murray
-  - email: spampatt@redhat.com
-    name: Shubham Dilip Pampattiwar
+  - email: oadp-maintainers@redhat.com
+    name: OADP Operator maintainers
   maturity: stable
   provider:
     name: Red Hat

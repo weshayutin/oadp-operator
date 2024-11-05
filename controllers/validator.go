@@ -5,27 +5,33 @@ import (
 	"fmt"
 	"strings"
 
-	"time"
-
 	mapset "github.com/deckarep/golang-set/v2"
-
 	"github.com/go-logr/logr"
+
 	oadpv1alpha1 "github.com/openshift/oadp-operator/api/v1alpha1"
 	"github.com/openshift/oadp-operator/pkg/credentials"
 )
 
+// ValidateDataProtectionCR function validates the DPA CR, returns true if valid, false otherwise
+// it calls other validation functions to validate the DPA CR
 func (r *DPAReconciler) ValidateDataProtectionCR(log logr.Logger) (bool, error) {
-	dpa := oadpv1alpha1.DataProtectionApplication{}
-	if err := r.Get(r.Context, r.NamespacedName, &dpa); err != nil {
-		return false, err
-	}
+
+	dpa := r.dpa
+
 	if dpa.Spec.Configuration == nil || dpa.Spec.Configuration.Velero == nil {
 		return false, errors.New("DPA CR Velero configuration cannot be nil")
+	}
+
+	if dpa.Spec.Configuration.Restic != nil && dpa.Spec.Configuration.NodeAgent != nil {
+		return false, errors.New("DPA CR cannot have restic (deprecated in OADP 1.3) as well as nodeAgent options at the same time")
 	}
 
 	if dpa.Spec.Configuration.Velero.NoDefaultBackupLocation {
 		if len(dpa.Spec.BackupLocations) != 0 {
 			return false, errors.New("DPA CR Velero configuration cannot have backup locations if noDefaultBackupLocation is set")
+		}
+		if dpa.BackupImages() {
+			return false, errors.New("backupImages needs to be set to false when noDefaultBackupLocation is set")
 		}
 	} else {
 		if len(dpa.Spec.BackupLocations) == 0 {
@@ -33,51 +39,16 @@ func (r *DPAReconciler) ValidateDataProtectionCR(log logr.Logger) (bool, error) 
 		}
 	}
 
-	if dpa.Spec.Configuration.Velero.NoDefaultBackupLocation && dpa.BackupImages() {
-		return false, errors.New("backupImages needs to be set to false when noDefaultBackupLocation is set")
+	if validBsl, err := r.ValidateBackupStorageLocations(); !validBsl || err != nil {
+		return validBsl, err
+	}
+	if validVsl, err := r.ValidateVolumeSnapshotLocations(); !validVsl || err != nil {
+		return validVsl, err
 	}
 
-	if len(dpa.Spec.BackupLocations) > 0 {
-		for _, location := range dpa.Spec.BackupLocations {
-			// check for velero BSL config or cloud storage config
-			if location.Velero == nil && location.CloudStorage == nil {
-				return false, errors.New("BackupLocation must have velero or bucket configuration")
-			}
-		}
-	}
-
-	if len(dpa.Spec.SnapshotLocations) > 0 {
-		for _, location := range dpa.Spec.SnapshotLocations {
-			if location.Velero == nil {
-				return false, errors.New("snapshotLocation velero configuration cannot be nil")
-			}
-		}
-	}
-
-	// check if the VSM plugin is specified or not
-	VSMPluginPresent := false
-	for _, plugin := range dpa.Spec.Configuration.Velero.DefaultPlugins {
-		if plugin == oadpv1alpha1.DefaultPluginVSM {
-			VSMPluginPresent = true
-		}
-	}
-
-	if r.checkIfDataMoverIsEnabled(&dpa) {
-		// parse for timeout if specified and see if there are no errors
-		if len(dpa.Spec.Features.DataMover.Timeout) > 0 {
-			_, err := time.ParseDuration(dpa.Spec.Features.DataMover.Timeout)
-			if err != nil {
-				return false, err
-			}
-		}
-
-		if !VSMPluginPresent {
-			return false, errors.New("datamover is enabled, specify vsm as a default plugin")
-		}
-	}
-
-	if !r.checkIfDataMoverIsEnabled(&dpa) && VSMPluginPresent {
-		return false, errors.New("datamover is disabled, remove vsm as a default plugin")
+	// check for VSM/Volsync DataMover (OADP 1.2 or below) syntax
+	if dpa.Spec.Features != nil && dpa.Spec.Features.DataMover != nil {
+		return false, errors.New("Delete vsm from spec.configuration.velero.defaultPlugins and dataMover object from spec.features. Use Velero Built-in Data Mover instead")
 	}
 
 	if val, found := dpa.Spec.UnsupportedOverrides[oadpv1alpha1.OperatorTypeKey]; found && val != oadpv1alpha1.OperatorTypeMTC {
@@ -88,12 +59,24 @@ func (r *DPAReconciler) ValidateDataProtectionCR(log logr.Logger) (bool, error) 
 		return false, err
 	}
 
-	if _, err := r.getVeleroResourceReqs(&dpa); err != nil {
+	// TODO refactor to call functions only once
+	// they are called here to check error, and then after to get value
+	if _, err := r.getVeleroResourceReqs(); err != nil {
 		return false, err
 	}
 
-	if _, err := getResticResourceReqs(&dpa); err != nil {
+	if _, err := getResticResourceReqs(dpa); err != nil {
 		return false, err
+	}
+	if _, err := getNodeAgentResourceReqs(dpa); err != nil {
+		return false, err
+	}
+
+	// validate non-admin enable and tech-preview-ack
+	if r.checkNonAdminEnabled() {
+		if !(dpa.Spec.UnsupportedOverrides[oadpv1alpha1.TechPreviewAck] == TrueVal) {
+			return false, errors.New("in order to enable/disable the non-admin feature please set dpa.spec.unsupportedOverrides[tech-preview-ack]: 'true'")
+		}
 	}
 
 	return true, nil
@@ -106,12 +89,9 @@ type empty struct{}
 // TODO: if multiple default plugins exist, ensure we validate all of them.
 // Right now its sequential validation
 func (r *DPAReconciler) ValidateVeleroPlugins(log logr.Logger) (bool, error) {
-	dpa := oadpv1alpha1.DataProtectionApplication{}
-	if err := r.Get(r.Context, r.NamespacedName, &dpa); err != nil {
-		return false, err
-	}
+	dpa := r.dpa
 
-	providerNeedsDefaultCreds, hasCloudStorage, err := r.noDefaultCredentials(dpa)
+	providerNeedsDefaultCreds, hasCloudStorage, err := r.noDefaultCredentials()
 	if err != nil {
 		return false, err
 	}
@@ -124,10 +104,24 @@ func (r *DPAReconciler) ValidateVeleroPlugins(log logr.Logger) (bool, error) {
 		}
 	}
 
+	foundAWSPlugin := false
+	foundLegacyAWSPlugin := false
 	for _, plugin := range dpa.Spec.Configuration.Velero.DefaultPlugins {
 		pluginSpecificMap, ok := credentials.PluginSpecificFields[plugin]
-		pluginNeedsCheck, foundInBSLorVSL := providerNeedsDefaultCreds[string(plugin)]
+		pluginNeedsCheck, foundInBSLorVSL := providerNeedsDefaultCreds[pluginSpecificMap.ProviderName]
 
+		// "aws" and "legacy-aws" cannot both be specified
+		if plugin == oadpv1alpha1.DefaultPluginAWS {
+			foundAWSPlugin = true
+		}
+		if plugin == oadpv1alpha1.DefaultPluginLegacyAWS {
+			foundLegacyAWSPlugin = true
+		}
+
+		// check for VSM/Volsync DataMover (OADP 1.2 or below) syntax
+		if plugin == oadpv1alpha1.DefaultPluginVSM {
+			return false, errors.New("Delete vsm from spec.configuration.velero.defaultPlugins and dataMover object from spec.features. Use Velero Built-in Data Mover instead")
+		}
 		if foundInVSL := snapshotLocationsProviders[string(plugin)]; foundInVSL {
 			pluginNeedsCheck = true
 		}
@@ -171,5 +165,10 @@ func (r *DPAReconciler) ValidateVeleroPlugins(log logr.Logger) (bool, error) {
 			}
 		}
 	}
+
+	if foundAWSPlugin && foundLegacyAWSPlugin {
+		return false, fmt.Errorf("%s and %s can not be both specified in DPA spec.configuration.velero.defaultPlugins", oadpv1alpha1.DefaultPluginAWS, oadpv1alpha1.DefaultPluginLegacyAWS)
+	}
+
 	return true, nil
 }
