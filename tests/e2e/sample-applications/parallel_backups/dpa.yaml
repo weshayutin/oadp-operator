@@ -1,0 +1,39 @@
+apiVersion: oadp.openshift.io/v1alpha1
+kind: DataProtectionApplication
+metadata:
+  name: dpa-sample
+  namespace: openshift-adp
+spec:
+  backupLocations:
+  - velero:
+      config:
+        profile: default
+        region: us-east-1
+      credential:
+        key: cloud
+        name: cloud-credentials
+      default: true
+      objectStorage:
+        bucket: velero-61
+        prefix: westestvelero
+      provider: aws
+  configuration:
+    nodeAgent:
+      enable: true
+      loadConcurrency:
+        globalConfig: 3
+      uploaderType: kopia
+    velero:
+      concurrentBackups: 3
+      defaultPlugins:
+      - kubevirt
+      - csi
+      - openshift
+      - aws
+      - hypershift
+      disableFsBackup: false
+      logLevel: debug
+  logFormat: text
+    enable: false
+  vmFileRestore:
+    enable: false

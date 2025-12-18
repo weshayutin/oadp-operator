@@ -1,0 +1,11 @@
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  name: backup-namespace1
+  namespace: openshift-adp
+spec:
+  snapshotMoveData: true
+  includedNamespaces:
+  - namespace1
+  storageLocation: dpa-sample-1
+  ttl: 720h0m0s
