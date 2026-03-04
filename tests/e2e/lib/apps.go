@@ -102,10 +102,22 @@ func InstallApplicationWithRetries(ocClient client.Client, file string, retries 
 					}
 				}
 				needsUpdate := false
+				// Bound PVCs have immutable spec (e.g. volumeName); skip spec update to avoid invalid update
+				skipSpecUpdate := false
+				if clusterResource.GetKind() == "PersistentVolumeClaim" {
+					if status, ok := clusterResource.Object["status"].(map[string]interface{}); ok {
+						if phase, _ := status["phase"].(string); phase == string(corev1.ClaimBound) {
+							skipSpecUpdate = true
+						}
+					}
+				}
 				for key := range clusterResource.Object {
 					if key == "status" {
 						// check we aren't hitting pending deletion finalizers
 						ginkgo.GinkgoWriter.Printf("%s has status %v", clusterResource.GroupVersionKind(), clusterResource.Object[key])
+						continue
+					}
+					if key == "spec" && skipSpecUpdate {
 						continue
 					}
 					if !reflect.DeepEqual(clusterResource.Object[key], resource.Object[key]) {
