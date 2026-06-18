@@ -37,6 +37,7 @@ import (
 
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var testEnvStarted bool
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -55,6 +56,7 @@ var _ = BeforeSuite(func() {
 
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
+	testEnvStarted = true
 	Expect(cfg).NotTo(BeNil())
 
 	err = oadpv1alpha1.AddToScheme(scheme.Scheme)
@@ -70,6 +72,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
+	if testEnvStarted {
+		err := testEnv.Stop()
+		Expect(err).NotTo(HaveOccurred())
+	}
 })

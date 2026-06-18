@@ -162,12 +162,8 @@ vet: ## Run go vet against code.
 	go vet -mod=mod ./...
 
 ENVTEST := $(shell pwd)/bin/setup-envtest
-ENVTESTPATH = $(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)
-ifeq ($(shell $(ENVTEST) list | grep $(ENVTEST_K8S_VERSION)),)
-	ENVTESTPATH = $(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)
-endif
 $(ENVTEST): ## Download envtest-setup locally if necessary.
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240320141353-395cfc7486e6)
+	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20250308055145-5fe7bb3edc86)
 
 .PHONY: envtest
 envtest: $(ENVTEST)
@@ -180,7 +176,7 @@ envtest: $(ENVTEST)
 # If bin/ contains binaries of different arch, you may remove them so the container can install their arch.
 .PHONY: test
 test: vet envtest ## Run Go linter and unit tests and check Go code format and if api and bundle folders are up to date.
-	KUBEBUILDER_ASSETS="$(ENVTESTPATH)" go test -mod=mod $(shell go list -mod=mod ./... | grep -v /tests/e2e) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(shell pwd)/bin -p path)" go test -mod=mod $(shell go list -mod=mod ./... | grep -v /tests/e2e) -coverprofile cover.out
 	@make fmt-isupdated
 	@make api-isupdated
 	@make bundle-isupdated
